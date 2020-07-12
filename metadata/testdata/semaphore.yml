@@ -1,0 +1,23 @@
+:branch: some-branch
+:build_url: https://some-owner.semaphoreci.com/workflows/22222222-2222-2222-2222-222222222222
+:check: semaphore
+:ci_provider: semaphore
+:commit: 1f192ff735f887dd7a25229b2ece0422d17931f5
+:repo_name_with_owner: some-owner/some-repo
+:timestamp: 2020-07-11T01:02:03Z
+:semaphore_agent_machine_environment_type: container
+:semaphore_agent_machine_os_image: ubuntu1804
+:semaphore_agent_machine_type: e1-standard-4
+:semaphore_git_commit_range: 39ae7373c5a46bfda3ff2c5e2f58b789eab9bfcd...1f192ff735f887dd7a25229b2ece0422d17931f5
+:semaphore_git_dir: some-dir
+:semaphore_git_ref: refs/heads/main
+:semaphore_git_ref_type: branch
+:semaphore_git_url: git@github.com:some-owner/some-repo.git
+:semaphore_job_id: 00000000-0000-0000-0000-000000000000
+:semaphore_job_name: Run tests
+:semaphore_job_result: passed
+:semaphore_organization_url: https://some-owner.semaphoreci.com
+:semaphore_project_id: 11111111-1111-1111-1111-111111111111
+:semaphore_project_name: some-repo
+:semaphore_workflow_id: 22222222-2222-2222-2222-222222222222
+:semaphore_workflow_number: 42

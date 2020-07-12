@@ -1,0 +1,87 @@
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
+	"github.com/buildpulse/cli/cmd"
+)
+
+// set at buildtime via ldflags
+var (
+	Version = "development"
+	Commit  = "unknown"
+)
+
+var usage = strings.ReplaceAll(`
+CLI to submit test results to BuildPulse
+
+USAGE
+	$ %s submit TEST_RESULTS_DIR --account-id=ACCOUNT_ID --repository-id=REPOSITORY_ID
+
+FLAGS
+  --account-id     BuildPulse account ID for the account that owns the repository
+  --repository-id  BuildPulse repository ID for the repository that produced the test results
+
+ENVIRONMENT VARIABLES
+	Set the following environment variables:
+
+	BUILDPULSE_ACCESS_KEY_ID      BuildPulse access key ID for the account that owns the repository
+
+	BUILDPULSE_SECRET_ACCESS_KEY  BuildPulse secret access key for the account that owns the repository
+
+EXAMPLE
+	$ %s submit test/reports --account-id 42 --repository-id 8675309
+`, "\t", "  ")
+
+func main() {
+	help := flag.Bool("help", false, "")
+	version := flag.Bool("version", false, "")
+	flag.Usage = func() {
+		binaryName := os.Args[0]
+		fmt.Fprintf(flag.CommandLine.Output(), usage, binaryName, binaryName)
+	}
+	flag.Parse()
+
+	if len(os.Args) == 1 {
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	switch {
+	case *help || os.Args[1] == "help":
+		fmt.Println(usage)
+	case *version || os.Args[1] == "version":
+		fmt.Printf("BuildPulse Test Reporter %s (%s %s %s)\n", Version, runtime.GOOS, Commit, runtime.Version())
+	case os.Args[1] == "submit" && len(os.Args) > 2:
+		c := cmd.NewSubmit()
+		envs := toMap(os.Environ())
+		if err := c.Init(os.Args[2:], envs); err != nil {
+			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
+			os.Exit(1)
+		}
+		key, err := c.Run()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Printf("Delivered test results to BuildPulse (%s)\n", key)
+	default:
+		flag.Usage()
+		os.Exit(1)
+	}
+
+	os.Exit(0)
+}
+
+func toMap(pairs []string) map[string]string {
+	m := map[string]string{}
+	for _, s := range pairs {
+		pair := strings.SplitN(s, "=", 2)
+		m[pair[0]] = pair[1]
+	}
+	return m
+}

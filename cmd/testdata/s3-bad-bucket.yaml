@@ -1,0 +1,53 @@
+---
+version: 1
+interactions:
+- request:
+    body: !!binary |
+      H4sIAAAAAAAA/+xXy3KjMBDkzFeouGNG4mWrYue2X5C97IWSQcSKAVGSiLN/vyVwyGPzsL
+      OOU1uhL5I1AzNSq7vwLDBcm4IZFvA7VrcV9+2Cr7juKqOdUwAAII3jYUySfgQSDeMAB4cp
+      RFFEkiR1ACcxJA6KT1L9HXTaMOUA3LyTpw0ryzfi9xu5H/8TvMl+cNM1wvxzjcP5x1GIwQ
+      GcRgmZ+D8HDuA/WCu501xpw/LtR2ocxT+JHSCEAJ74PweO5X/Mw7O7ujqshj2PJIpe5T8K
+      kz3/kACEDpAoTsFBZznEb87/xeVdXaFbrrSQzdLDM/AQb3JZiOZ66f28+uHPvcuVe2Gvhe
+      6E4XrlIvTwEzWs5ktvvBUeMqLm2rC6XXoECPiQ+hhfAaZhSkk6xJcezABssn3P0sMeKpmo
+      OsX10rMdKCXVMNVb0ba8sHNbeV87Z5qjvGJaP6vvj4ve89b6qz1E9j14Qb+ZYNzNyn30Q6
+      /cr2bn8/Fh/ZNP0j+OBv2Hk/7PgRPrn3yx/snr+ieT/l/AEfq3kQ/VOO77D+z3H0TT/7+z
+      4Ej+x7TwcPs/zv9JYv0/ivHk/+fAif0//GL/D1/3/3Dy/xdwkP47URVtV2k++32w6B/hHf
+      1jCOMH/Se9/1tLmPR/BtC1Yk2+oUjLmvslZ6ZT3KU95VmnKoo2xrSaBsG1MJtuPctlHfS5
+      ctdwNUwVb2XAciNkowPVNTqYJ2kcwsKl+YbnW4qGh/19jktzkbVK3oqCqxeCsq6FoQiXeE
+      HKMg3jcj5PiyJlJCZksSY85xARUuB0EeIydqltILPSznbCbLK+tf2WnrXp0tGfKHrqT0Ao
+      hL9cOrSTsdzI+5d0mqsxsGaaZ4qXFCle6mDDWaGDmolmzLBLf2U8PeB95oFJrTyKi4cnuy
+      YTBUUjHY/Wm65e21OKyLi8k2pbVnJHUc//N7C/CRMmTPi2+BMAAP//lKAc5QAeAAA=
+    form: {}
+    headers:
+      Authorization:
+      - REDACTED
+      Content-Length:
+      - "731"
+      Content-Md5:
+      - 6gFDgFr83IG+LPcNWlCHvw==
+      User-Agent:
+      - aws-sdk-go/1.33.7 (go1.14.4; darwin; amd64) S3Manager
+      X-Amz-Content-Sha256:
+      - f3f8d97071a55a395844dda7fcf8d8d5aba75001f198ec8b4e704cae6752b24a
+      X-Amz-Date:
+      - 20200719T143259Z
+    url: https://s3.us-east-2.amazonaws.com/1.buildpulse-uploads/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
+    method: PUT
+  response:
+    body: |-
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message><BucketName>1.buildpulse-uploads</BucketName><RequestId>C5FC16CF1F3BC159</RequestId><HostId>Cpe4wKK/oIGVgeKjYMEw2J5jjCfNSOUj+fDaBxDO8EzsRhv+Gnk4x3zfSFu5oiBD35LrSzWbQmY=</HostId></Error>
+    headers:
+      Content-Type:
+      - application/xml
+      Date:
+      - Sun, 19 Jul 2020 14:32:59 GMT
+      Server:
+      - AmazonS3
+      X-Amz-Id-2:
+      - Cpe4wKK/oIGVgeKjYMEw2J5jjCfNSOUj+fDaBxDO8EzsRhv+Gnk4x3zfSFu5oiBD35LrSzWbQmY=
+      X-Amz-Request-Id:
+      - C5FC16CF1F3BC159
+    status: 404 Not Found
+    code: 404
+    duration: ""
