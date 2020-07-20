@@ -31,3 +31,13 @@ jobs:
       run: |
         mkdir -p tmp/test-results
         gotestsum --junitfile tmp/test-results/gotestsum-report.xml ./...
+
+    - name: Upload test results to BuildPulse for flaky test detection -- Inception! 🤯
+      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
+      env:
+        BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+        BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+      run: |
+        curl -fsSL https://github.com/buildpulse/test-reporter/releases/latest/download/test-reporter-linux-amd64 > ./buildpulse-test-reporter
+        chmod +x ./buildpulse-test-reporter
+        ./buildpulse-test-reporter submit tmp/test-results --account-id 68192324 --repository-id 280914963
