@@ -2,3 +2,4 @@
 /buildpulse-test-reporter
 /cli
 /cmd/testdata/example-test-results/buildpulse.yml
+/tmp
