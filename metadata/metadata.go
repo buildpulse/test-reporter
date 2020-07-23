@@ -33,6 +33,8 @@ type AbstractMetadata struct {
 // NewMetadata creates a new Metadata instance from the given environment.
 func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
 	switch {
+	case envs["CIRCLECI"] == "true":
+		return newCircleMetadata(envs, now)
 	case envs["GITHUB_ACTIONS"] == "true":
 		return newGithubMetadata(envs, now)
 	case envs["SEMAPHORE"] == "true":
@@ -40,8 +42,57 @@ func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error)
 	case envs["TRAVIS"] == "true":
 		return newTravisMetadata(envs, now)
 	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (GitHub Actions, Semaphore, or TravisCI)")
+		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (CircleCI, GitHub Actions, Semaphore, or Travis CI)")
 	}
+}
+
+var _ Metadata = (*circleMetadata)(nil)
+
+type circleMetadata struct {
+	AbstractMetadata `yaml:",inline"`
+
+	CircleBranch              string `env:"CIRCLE_BRANCH" yaml:"-"`
+	CircleBuildNumber         uint   `env:"CIRCLE_BUILD_NUM" yaml:":circle_build_num"`
+	CircleBuildURL            string `env:"CIRCLE_BUILD_URL" yaml:"-"`
+	CircleJob                 string `env:"CIRCLE_JOB" yaml:":circle_job"`
+	CircleProjectReponame     string `env:"CIRCLE_PROJECT_REPONAME" yaml:"-"`
+	CircleProjectUsername     string `env:"CIRCLE_PROJECT_USERNAME" yaml:"-"`
+	CirclePullRequestNumber   uint   `env:"CIRCLE_PR_NUMBER" yaml:":circle_pr_number,omitempty"`
+	CirclePullRequestReponame string `env:"CIRCLE_PR_REPONAME" yaml:":circle_pr_reponame,omitempty"`
+	CirclePullRequestURL      string `env:"CIRCLE_PULL_REQUEST" yaml:":circle_pull_request,omitempty"`
+	CirclePullRequestUsername string `env:"CIRCLE_PR_USERNAME" yaml:":circle_pr_username,omitempty"`
+	CircleRepoURL             string `env:"CIRCLE_REPOSITORY_URL" yaml:":circle_repository_url"`
+	CircleSHA1                string `env:"CIRCLE_SHA1" yaml:"-"`
+	CircleTag                 string `env:"CIRCLE_TAG" yaml:":circle_tag,omitempty"`
+	CircleUsername            string `env:"CIRCLE_USERNAME" yaml:":circle_username"`
+	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
+}
+
+func newCircleMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+	m := &circleMetadata{}
+
+	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
+		return nil, err
+	}
+
+	m.Branch = m.CircleBranch
+	m.BuildURL = m.CircleBuildURL
+	m.CIProvider = "circleci"
+	m.Commit = m.CircleSHA1
+	m.RepoNameWithOwner = fmt.Sprintf("%s/%s", m.CircleProjectUsername, m.CircleProjectReponame)
+	m.Timestamp = now()
+
+	m.Check = "circleci"
+	check := envs["BUILDPULSE_CHECK_NAME"]
+	if check != "" {
+		m.Check = check
+	}
+
+	return m, nil
+}
+
+func (c *circleMetadata) MarshalYAML() (out []byte, err error) {
+	return marshalYAML(c)
 }
 
 var _ Metadata = (*githubMetadata)(nil)
