@@ -23,7 +23,7 @@ type Metadata interface {
 type AbstractMetadata struct {
 	Branch            string    `yaml:":branch"`
 	BuildURL          string    `yaml:":build_url"`
-	Check             string    `yaml:":check"`
+	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"`
 	CIProvider        string    `yaml:":ci_provider"`
 	Commit            string    `yaml:":commit"`
 	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
@@ -82,10 +82,8 @@ func newCircleMetadata(envs map[string]string, now func() time.Time) (Metadata, 
 	m.RepoNameWithOwner = fmt.Sprintf("%s/%s", m.CircleProjectUsername, m.CircleProjectReponame)
 	m.Timestamp = now()
 
-	m.Check = "circleci"
-	check := envs["BUILDPULSE_CHECK_NAME"]
-	if check != "" {
-		m.Check = check
+	if m.Check == "" {
+		m.Check = "circleci"
 	}
 
 	return m, nil
@@ -133,10 +131,8 @@ func newGithubMetadata(envs map[string]string, now func() time.Time) (Metadata, 
 	}
 	m.Branch = branch
 
-	m.Check = "github-actions"
-	check := envs["BUILDPULSE_CHECK_NAME"]
-	if check != "" {
-		m.Check = check
+	if m.Check == "" {
+		m.Check = "github-actions"
 	}
 
 	return m, nil
@@ -199,10 +195,8 @@ func newSemaphoreMetadata(envs map[string]string, now func() time.Time) (Metadat
 	m.RepoNameWithOwner = m.SemaphoreGitRepoSlug
 	m.Timestamp = now()
 
-	m.Check = "semaphore"
-	check := envs["BUILDPULSE_CHECK_NAME"]
-	if check != "" {
-		m.Check = check
+	if m.Check == "" {
+		m.Check = "semaphore"
 	}
 
 	return m, nil
@@ -262,10 +256,8 @@ func newTravisMetadata(envs map[string]string, now func() time.Time) (Metadata, 
 		m.TravisPullRequestNumber = uint(prNum)
 	}
 
-	m.Check = "travis-ci"
-	check := envs["BUILDPULSE_CHECK_NAME"]
-	if check != "" {
-		m.Check = check
+	if m.Check == "" {
+		m.Check = "travis-ci"
 	}
 
 	return m, nil
