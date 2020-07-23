@@ -17,6 +17,23 @@ func TestNewMetadata(t *testing.T) {
 		fixture string
 	}{
 		{
+			name: "CircleCI",
+			envs: map[string]string{
+				"CIRCLECI":                "true",
+				"CIRCLE_BRANCH":           "some-branch",
+				"CIRCLE_BUILD_NUM":        "1",
+				"CIRCLE_BUILD_URL":        "https://circleci.com/gh/some-owner/some-repo/8675309",
+				"CIRCLE_SHA1":             "1f192ff735f887dd7a25229b2ece0422d17931f5",
+				"CIRCLE_JOB":              "some-job",
+				"CIRCLE_PROJECT_REPONAME": "some-repo",
+				"CIRCLE_PROJECT_USERNAME": "some-owner",
+				"CIRCLE_REPOSITORY_URL":   "git@github.com:some-owner/some-repo.git",
+				"CIRCLE_WORKFLOW_ID":      "00000000-0000-0000-0000-000000000000",
+				"CIRCLE_USERNAME":         "some-committer",
+			},
+			fixture: "./testdata/circle.yml",
+		},
+		{
 			name: "GitHubActions",
 			envs: map[string]string{
 				"GITHUB_ACTIONS":    "true",
@@ -124,6 +141,15 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 		expectedCheck    string
 	}{
 		{
+			name: "Circle",
+			envs: map[string]string{
+				"CIRCLECI":              "true",
+				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
+			},
+			expectedProvider: "circleci",
+			expectedCheck:    "some-custom-check-name",
+		},
+		{
 			name: "GitHubActions",
 			envs: map[string]string{
 				"GITHUB_ACTIONS":        "true",
@@ -160,6 +186,49 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Regexp(t, fmt.Sprintf(":ci_provider: %s", tt.expectedProvider), string(yaml))
 			assert.Regexp(t, fmt.Sprintf(":check: %s", tt.expectedCheck), string(yaml))
+		})
+	}
+}
+
+func TestNewCircleMetadata_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "with pull request",
+			envs: map[string]string{
+				"CIRCLE_PR_NUMBER":    "42",
+				"CIRCLE_PR_REPONAME":  "some-repo",
+				"CIRCLE_PR_USERNAME":  "some-forker",
+				"CIRCLE_PULL_REQUEST": "https://github.com/some-owner/some-repo/pull/42",
+			},
+			expectedLines: []string{
+				":circle_pr_number: 42",
+				":circle_pr_reponame: some-repo",
+				":circle_pr_username: some-forker",
+				":circle_pull_request: https://github.com/some-owner/some-repo/pull/42",
+			},
+		},
+		{
+			name: "with tag",
+			envs: map[string]string{
+				"CIRCLE_TAG": "v0.1.0",
+			},
+			expectedLines: []string{":circle_tag: v0.1.0"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta, err := newCircleMetadata(tt.envs, time.Now)
+			assert.NoError(t, err)
+
+			yaml, err := meta.MarshalYAML()
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
 		})
 	}
 }

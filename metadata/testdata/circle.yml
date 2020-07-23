@@ -1,0 +1,12 @@
+:branch: some-branch
+:build_url: https://circleci.com/gh/some-owner/some-repo/8675309
+:check: circleci
+:ci_provider: circleci
+:commit: 1f192ff735f887dd7a25229b2ece0422d17931f5
+:repo_name_with_owner: some-owner/some-repo
+:timestamp: 2020-07-11T01:02:03Z
+:circle_build_num: 1
+:circle_job: some-job
+:circle_repository_url: git@github.com:some-owner/some-repo.git
+:circle_username: some-committer
+:circle_workflow_id: 00000000-0000-0000-0000-000000000000
