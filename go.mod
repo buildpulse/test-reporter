@@ -3,7 +3,7 @@ module github.com/buildpulse/cli
 go 1.14
 
 require (
-	github.com/aws/aws-sdk-go v1.33.9
+	github.com/aws/aws-sdk-go v1.33.12
 	github.com/caarlos0/env/v6 v6.3.1-0.20200712182401-52290f9d615e
 	github.com/dnaeon/go-vcr v1.0.1
 	github.com/google/uuid v1.1.1
