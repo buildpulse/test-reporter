@@ -21,11 +21,16 @@ jobs:
     - name: Get dependencies
       run: go get -v -t -d ./...
 
-    - name: Set up gotestsum
-      run: go get gotest.tools/gotestsum
+    - name: Fetch build tools
+      run: |
+        go get golang.org/x/lint/golint
+        go get gotest.tools/gotestsum
 
     - name: Build
       run: go build -v .
+
+    - name: Lint
+      run: golint -set_exit_status ./...
 
     - name: Test
       run: |
