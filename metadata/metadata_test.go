@@ -17,6 +17,27 @@ func TestNewMetadata(t *testing.T) {
 		fixture string
 	}{
 		{
+			name: "Buildkite",
+			envs: map[string]string{
+				"BUILDKITE_BRANCH":            "some-branch",
+				"BUILDKITE_BUILD_ID":          "00000000-0000-0000-0000-000000000000",
+				"BUILDKITE_BUILD_NUMBER":      "42",
+				"BUILDKITE_BUILD_URL":         "https://buildkite.com/some-org/some-project/builds/8675309",
+				"BUILDKITE_COMMIT":            "1f192ff735f887dd7a25229b2ece0422d17931f5",
+				"BUILDKITE_JOB_ID":            "11111111-1111-1111-1111-111111111111",
+				"BUILDKITE_LABEL":             ":test_tube: Run tests",
+				"BUILDKITE_ORGANIZATION_SLUG": "some-org",
+				"BUILDKITE_PIPELINE_ID":       "22222222-2222-2222-2222-222222222222",
+				"BUILDKITE_PIPELINE_SLUG":     "some-pipeline",
+				"BUILDKITE_PROJECT_SLUG":      "some-org/some-project",
+				"BUILDKITE_PULL_REQUEST":      "false",
+				"BUILDKITE_REPO":              "git@github.com:some-owner/some-repo.git",
+				"BUILDKITE_RETRY_COUNT":       "2",
+				"BUILDKITE":                   "true",
+			},
+			fixture: "./testdata/buildkite.yml",
+		},
+		{
 			name: "CircleCI",
 			envs: map[string]string{
 				"CIRCLECI":                "true",
@@ -141,6 +162,16 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 		expectedCheck    string
 	}{
 		{
+			name: "Buildkite",
+			envs: map[string]string{
+				"BUILDKITE":             "true",
+				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
+				"BUILDKITE_REPO":        "git@github.com:x/y.git",
+			},
+			expectedProvider: "buildkite",
+			expectedCheck:    "some-custom-check-name",
+		},
+		{
 			name: "Circle",
 			envs: map[string]string{
 				"CIRCLECI":              "true",
@@ -186,6 +217,61 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Regexp(t, fmt.Sprintf(":ci_provider: %s", tt.expectedProvider), string(yaml))
 			assert.Regexp(t, fmt.Sprintf(":check: %s", tt.expectedCheck), string(yaml))
+		})
+	}
+}
+
+func TestNewBuildkiteMetadata_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "when rebuilt",
+			envs: map[string]string{
+				"BUILDKITE_REBUILT_FROM_BUILD_ID":     "00000000-0000-0000-0000-000000000000",
+				"BUILDKITE_REBUILT_FROM_BUILD_NUMBER": "42",
+				"BUILDKITE_REPO":                      "git@github.com:x/y.git",
+			},
+			expectedLines: []string{
+				":buildkite_rebuilt_from_build_id: 00000000-0000-0000-0000-000000000000",
+				":buildkite_rebuilt_from_build_number: 42",
+			},
+		},
+		{
+			name: "with pull request",
+			envs: map[string]string{
+				"BUILDKITE_PULL_REQUEST_BASE_BRANCH": "some-base-branch",
+				"BUILDKITE_PULL_REQUEST_REPO":        "git://github.com/some-forker/some-repo.git",
+				"BUILDKITE_PULL_REQUEST":             "99",
+				"BUILDKITE_REPO":                     "git@github.com:x/y.git",
+			},
+			expectedLines: []string{
+				":buildkite_pull_request_base_branch: some-base-branch",
+				":buildkite_pull_request_repo: git://github.com/some-forker/some-repo.git",
+				":buildkite_pull_request_number: 99",
+			},
+		},
+		{
+			name: "with tag",
+			envs: map[string]string{
+				"BUILDKITE_REPO": "git@github.com:x/y.git",
+				"BUILDKITE_TAG":  "v0.1.0",
+			},
+			expectedLines: []string{":buildkite_tag: v0.1.0"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta, err := newBuildkiteMetadata(tt.envs, time.Now)
+			assert.NoError(t, err)
+
+			yaml, err := meta.MarshalYAML()
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
 		})
 	}
 }
@@ -316,6 +402,31 @@ func TestNewTravisMetadata_extraFields(t *testing.T) {
 			assert.NoError(t, err)
 			for _, line := range tt.expectedLines {
 				assert.Regexp(t, line, string(yaml))
+			}
+		})
+	}
+}
+
+func Test_nameWithOwnerFromGitURL(t *testing.T) {
+	tests := []struct {
+		name string
+		url  string
+		nwo  string
+		err  bool
+	}{
+		{name: "https", url: "https://github.com/some-owner/some-repo.git", nwo: "some-owner/some-repo", err: false},
+		{name: "ssh", url: "git@github.com:some-owner/some-repo.git", nwo: "some-owner/some-repo", err: false},
+		{name: "malformed", url: "some-malformed-url", nwo: "", err: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			nwo, err := nameWithOwnerFromGitURL(tt.url)
+
+			if tt.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, nwo, tt.nwo)
 			}
 		})
 	}
