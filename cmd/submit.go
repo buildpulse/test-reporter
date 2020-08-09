@@ -87,7 +87,7 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	}
 	s.credentials.AccessKeyID = id
 
-	key, _ := envs["BUILDPULSE_SECRET_ACCESS_KEY"]
+	key, ok := envs["BUILDPULSE_SECRET_ACCESS_KEY"]
 	if !ok || key == "" {
 		return fmt.Errorf("missing required environment variable: BUILDPULSE_SECRET_ACCESS_KEY")
 	}
