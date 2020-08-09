@@ -33,6 +33,8 @@ type AbstractMetadata struct {
 // NewMetadata creates a new Metadata instance from the given environment.
 func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
 	switch {
+	case envs["BUILDKITE"] == "true":
+		return newBuildkiteMetadata(envs, now)
 	case envs["CIRCLECI"] == "true":
 		return newCircleMetadata(envs, now)
 	case envs["GITHUB_ACTIONS"] == "true":
@@ -42,8 +44,70 @@ func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error)
 	case envs["TRAVIS"] == "true":
 		return newTravisMetadata(envs, now)
 	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (CircleCI, GitHub Actions, Semaphore, or Travis CI)")
+		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Semaphore, or Travis CI)")
 	}
+}
+
+var _ Metadata = (*buildkiteMetadata)(nil)
+
+type buildkiteMetadata struct {
+	AbstractMetadata `yaml:",inline"`
+
+	BuildkiteBranch                 string `env:"BUILDKITE_BRANCH" yaml:"-"`
+	BuildkiteBuildID                string `env:"BUILDKITE_BUILD_ID" yaml:":buildkite_build_id"`
+	BuildkiteBuildNumber            uint   `env:"BUILDKITE_BUILD_NUMBER" yaml:":buildkite_build_number"`
+	BuildkiteBuildURL               string `env:"BUILDKITE_BUILD_URL" yaml:"-"`
+	BuildkiteCommit                 string `env:"BUILDKITE_COMMIT" yaml:"-"`
+	BuildkiteJobID                  string `env:"BUILDKITE_JOB_ID" yaml:":buildkite_job_id"`
+	BuildkiteLabel                  string `env:"BUILDKITE_LABEL" yaml:":buildkite_label"`
+	BuildkiteOrganizationSlug       string `env:"BUILDKITE_ORGANIZATION_SLUG" yaml:":buildkite_organization_slug"`
+	BuildkitePipelineID             string `env:"BUILDKITE_PIPELINE_ID" yaml:":buildkite_pipeline_id"`
+	BuildkitePipelineSlug           string `env:"BUILDKITE_PIPELINE_SLUG" yaml:":buildkite_pipeline_slug"`
+	BuildkiteProjectSlug            string `env:"BUILDKITE_PROJECT_SLUG" yaml:":buildkite_project_slug"`
+	BuildkitePullRequest            string `env:"BUILDKITE_PULL_REQUEST" yaml:"-"`
+	BuildkitePullRequestBaseBranch  string `env:"BUILDKITE_PULL_REQUEST_BASE_BRANCH" yaml:":buildkite_pull_request_base_branch,omitempty"`
+	BuildkitePullRequestNumber      uint   `yaml:":buildkite_pull_request_number,omitempty"`
+	BuildkitePullRequestRepo        string `env:"BUILDKITE_PULL_REQUEST_REPO" yaml:":buildkite_pull_request_repo,omitempty"`
+	BuildkiteRebuiltFromBuildID     string `env:"BUILDKITE_REBUILT_FROM_BUILD_ID" yaml:":buildkite_rebuilt_from_build_id,omitempty"`
+	BuildkiteRebuiltFromBuildNumber uint   `env:"BUILDKITE_REBUILT_FROM_BUILD_NUMBER" yaml:":buildkite_rebuilt_from_build_number,omitempty"`
+	BuildkiteRepoURL                string `env:"BUILDKITE_REPO" yaml:"-"`
+	BuildkiteRetryCount             uint   `env:"BUILDKITE_RETRY_COUNT" yaml:":buildkite_retry_count"`
+	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
+}
+
+func newBuildkiteMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+	m := &buildkiteMetadata{}
+
+	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
+		return nil, err
+	}
+
+	m.Branch = m.BuildkiteBranch
+	m.BuildURL = m.BuildkiteBuildURL
+	m.CIProvider = "buildkite"
+	m.Commit = m.BuildkiteCommit
+	m.Timestamp = now()
+
+	nwo, err := nameWithOwnerFromGitURL(m.BuildkiteRepoURL)
+	if err != nil {
+		return nil, err
+	}
+	m.RepoNameWithOwner = nwo
+
+	prNum, err := strconv.ParseUint(m.BuildkitePullRequest, 0, 0)
+	if err == nil {
+		m.BuildkitePullRequestNumber = uint(prNum)
+	}
+
+	if m.Check == "" {
+		m.Check = "buildkite"
+	}
+
+	return m, nil
+}
+
+func (b *buildkiteMetadata) MarshalYAML() (out []byte, err error) {
+	return marshalYAML(b)
 }
 
 var _ Metadata = (*circleMetadata)(nil)
@@ -274,4 +338,15 @@ func marshalYAML(m interface{}) (out []byte, err error) {
 	}
 
 	return data, nil
+}
+
+func nameWithOwnerFromGitURL(url string) (string, error) {
+	re := regexp.MustCompile(`github.com[:/](.*)`)
+
+	matches := re.FindStringSubmatch(url)
+	if len(matches) != 2 {
+		return "", fmt.Errorf("unable to extract repository name-with-owner from URL: %s", url)
+	}
+
+	return strings.TrimSuffix(matches[1], ".git"), nil
 }
