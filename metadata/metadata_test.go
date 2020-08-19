@@ -72,6 +72,17 @@ func TestNewMetadata(t *testing.T) {
 			fixture: "./testdata/github.yml",
 		},
 		{
+			name: "Jenkins",
+			envs: map[string]string{
+				"BUILD_URL":    "https://some-jenkins-server.com/job/some-project/8675309",
+				"GIT_BRANCH":   "origin/some-branch",
+				"GIT_COMMIT":   "1f192ff735f887dd7a25229b2ece0422d17931f5",
+				"GIT_URL":      "https://github.com/some-owner/some-repo.git",
+				"JENKINS_HOME": "/var/lib/jenkins",
+			},
+			fixture: "./testdata/jenkins.yml",
+		},
+		{
 			name: "Semaphore",
 			envs: map[string]string{
 				"SEMAPHORE": "true",
@@ -187,6 +198,17 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
 			},
 			expectedProvider: "github-actions",
+			expectedCheck:    "some-custom-check-name",
+		},
+		{
+			name: "Jenkins",
+			envs: map[string]string{
+				"JENKINS_HOME":          "/var/lib/jenkins",
+				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
+				"BUILD_URL":             "https://some-jenkins-server.com/job/some-project/8675309",
+				"GIT_URL":               "https://github.com/some-owner/some-repo.git",
+			},
+			expectedProvider: "jenkins",
 			expectedCheck:    "some-custom-check-name",
 		},
 		{
