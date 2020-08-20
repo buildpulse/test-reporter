@@ -39,12 +39,14 @@ func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error)
 		return newCircleMetadata(envs, now)
 	case envs["GITHUB_ACTIONS"] == "true":
 		return newGithubMetadata(envs, now)
+	case envs["JENKINS_HOME"] != "":
+		return newJenkinsMetadata(envs, now)
 	case envs["SEMAPHORE"] == "true":
 		return newSemaphoreMetadata(envs, now)
 	case envs["TRAVIS"] == "true":
 		return newTravisMetadata(envs, now)
 	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Semaphore, or Travis CI)")
+		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
 }
 
@@ -217,6 +219,51 @@ func (g *githubMetadata) branch() (string, error) {
 
 func (g *githubMetadata) MarshalYAML() (out []byte, err error) {
 	return marshalYAML(g)
+}
+
+var _ Metadata = (*jenkinsMetadata)(nil)
+
+type jenkinsMetadata struct {
+	AbstractMetadata `yaml:",inline"`
+
+	GitBranch string `env:"GIT_BRANCH" yaml:"-"`
+	GitCommit string `env:"GIT_COMMIT" yaml:"-"`
+	GitURL    string `env:"GIT_URL" yaml:"-"`
+}
+
+func newJenkinsMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+	m := &jenkinsMetadata{}
+
+	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
+		return nil, err
+	}
+
+	m.Branch = m.GitBranch
+	m.CIProvider = "jenkins"
+	m.Commit = m.GitCommit
+	m.Timestamp = now()
+
+	url, ok := envs["BUILD_URL"]
+	if !ok || url == "" {
+		return nil, fmt.Errorf("missing required environment variable: BUILD_URL")
+	}
+	m.BuildURL = url
+
+	nwo, err := nameWithOwnerFromGitURL(m.GitURL)
+	if err != nil {
+		return nil, err
+	}
+	m.RepoNameWithOwner = nwo
+
+	if m.Check == "" {
+		m.Check = "jenkins"
+	}
+
+	return m, nil
+}
+
+func (b *jenkinsMetadata) MarshalYAML() (out []byte, err error) {
+	return marshalYAML(b)
 }
 
 var _ Metadata = (*semaphoreMetadata)(nil)
