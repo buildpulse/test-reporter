@@ -9,5 +9,4 @@ require (
 	github.com/google/uuid v1.1.2
 	github.com/stretchr/testify v1.6.1
 	gopkg.in/yaml.v2 v2.3.0
-	gotest.tools/gotestsum v0.5.2 // indirect
 )
