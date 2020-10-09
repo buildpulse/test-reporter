@@ -146,8 +146,8 @@ func toTarGz(dir string) (dest string, err error) {
 	return toGz(tarPath)
 }
 
-// toTar creates a tarball containing the contents of the named directory (dir)
-// and returns the path of the resulting file.
+// toTar creates a tarball containing the submittable contents of the named
+// directory (dir) and returns the path of the resulting file.
 func toTar(dir string) (dest string, err error) {
 	tarfile, err := ioutil.TempFile("", "buildpulse-*.tar")
 	if err != nil {
@@ -162,6 +162,10 @@ func toTar(dir string) (dest string, err error) {
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
+			}
+
+			if !info.IsDir() && filepath.Base(path) != "buildpulse.yml" && filepath.Ext(path) != ".xml" {
+				return nil
 			}
 
 			header, err := tar.FileInfoHeader(info, path)
