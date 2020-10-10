@@ -32,6 +32,11 @@ type AbstractMetadata struct {
 	Timestamp         time.Time `yaml:":timestamp"`
 }
 
+func (a *AbstractMetadata) initVersion(version *Version) {
+	a.ReporterOS = version.GoOS
+	a.ReporterVersion = version.Number
+}
+
 // NewMetadata creates a new Metadata instance from the given environment.
 func NewMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	switch {
@@ -81,8 +86,7 @@ type buildkiteMetadata struct {
 
 func newBuildkiteMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &buildkiteMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -140,8 +144,7 @@ type circleMetadata struct {
 
 func newCircleMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &circleMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -185,8 +188,7 @@ type githubMetadata struct {
 
 func newGithubMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &githubMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -241,8 +243,7 @@ type jenkinsMetadata struct {
 
 func newJenkinsMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &jenkinsMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -304,8 +305,7 @@ type semaphoreMetadata struct {
 
 func newSemaphoreMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &semaphoreMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -362,8 +362,7 @@ type travisMetadata struct {
 
 func newTravisMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &travisMetadata{}
-	m.ReporterOS = version.GoOS
-	m.ReporterVersion = version.Number
+	m.initVersion(version)
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
