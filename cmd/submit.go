@@ -159,13 +159,19 @@ func toTar(dir string) (dest string, err error) {
 	writer := tar.NewWriter(tarfile)
 	defer writer.Close()
 
+	isIncludable := func(info os.FileInfo) bool {
+		return info.IsDir() ||
+			filepath.Base(info.Name()) == "buildpulse.yml" ||
+			bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml"))
+	}
+
 	return tarfile.Name(), filepath.Walk(dir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
 
-			if !info.IsDir() && filepath.Base(path) != "buildpulse.yml" && !bytes.EqualFold([]byte(filepath.Ext(path)), []byte(".xml")) {
+			if !isIncludable(info) {
 				return nil
 			}
 
