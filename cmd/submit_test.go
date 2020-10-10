@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/buildpulse/cli/metadata"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/uuid"
@@ -34,7 +35,7 @@ func TestSubmit_Init(t *testing.T) {
 	dir, err := os.Getwd()
 	require.NoError(t, err)
 
-	s := NewSubmit()
+	s := NewSubmit(&metadata.Version{})
 	err = s.Init([]string{dir, "--account-id", "42", "--repository-id", "8675309"}, exampleEnv)
 	assert.NoError(t, err)
 	assert.Equal(t, dir, s.path)
@@ -88,7 +89,7 @@ func TestSubmit_Init_invalidArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSubmit()
+			s := NewSubmit(&metadata.Version{})
 			err := s.Init(strings.Split(tt.args, " "), exampleEnv)
 			if assert.Error(t, err) {
 				assert.Regexp(t, tt.errMsg, err.Error())
@@ -140,7 +141,7 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 			dir, err := os.Getwd()
 			require.NoError(t, err)
 
-			s := NewSubmit()
+			s := NewSubmit(&metadata.Version{})
 			err = s.Init([]string{dir, "--account-id", "42", "--repository-id", "8675309"}, tt.envVars)
 			if assert.Error(t, err) {
 				assert.Equal(t, tt.errMsg, err.Error())
@@ -151,7 +152,7 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 
 func TestSubmit_Init_invalidPath(t *testing.T) {
 	t.Run("NonexistentPath", func(t *testing.T) {
-		s := NewSubmit()
+		s := NewSubmit(&metadata.Version{})
 		err := s.Init([]string{"some-nonexistent-path", "--account-id", "42", "--repository-id", "8675309"}, exampleEnv)
 		if assert.Error(t, err) {
 			assert.Equal(t, "path is not a directory: some-nonexistent-path", err.Error())
@@ -163,7 +164,7 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 
-		s := NewSubmit()
+		s := NewSubmit(&metadata.Version{})
 		err = s.Init([]string{tmpfile.Name(), "--account-id", "42", "--repository-id", "8675309"}, exampleEnv)
 		if assert.Error(t, err) {
 			assert.Regexp(t, "path is not a directory: ", err.Error())
@@ -190,6 +191,7 @@ func TestSubmit_Run(t *testing.T) {
 	s := &Submit{
 		client:       &http.Client{Transport: r},
 		idgen:        func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
+		version:      &metadata.Version{Number: "v1.2.3"},
 		envs:         envs,
 		path:         dir,
 		accountID:    42,
@@ -207,6 +209,7 @@ func TestSubmit_Run(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(yaml), ":ci_provider: github-actions")
 	assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
+	assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
 
 	assert.Equal(t, "8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
 }

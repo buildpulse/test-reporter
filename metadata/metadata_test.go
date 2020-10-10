@@ -148,7 +148,8 @@ func TestNewMetadata(t *testing.T) {
 			expected, err := ioutil.ReadFile(tt.fixture)
 			require.NoError(t, err)
 
-			meta, err := NewMetadata(tt.envs, now)
+			version := &Version{Number: "v1.2.3", GoOS: "linux"}
+			meta, err := NewMetadata(version, tt.envs, now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -159,7 +160,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(map[string]string{}, time.Now)
+	_, err := NewMetadata(&Version{}, map[string]string{}, time.Now)
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -232,7 +233,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(tt.envs, time.Now)
+			meta, err := NewMetadata(&Version{}, tt.envs, time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -286,7 +287,7 @@ func TestNewBuildkiteMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newBuildkiteMetadata(tt.envs, time.Now)
+			meta, err := newBuildkiteMetadata(&Version{}, tt.envs, time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -329,7 +330,7 @@ func TestNewCircleMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newCircleMetadata(tt.envs, time.Now)
+			meta, err := newCircleMetadata(&Version{}, tt.envs, time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -369,7 +370,7 @@ func TestNewGithubMetadata_refTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newGithubMetadata(tt.envs, time.Now)
+			meta, err := newGithubMetadata(&Version{}, tt.envs, time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -417,7 +418,7 @@ func TestNewTravisMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newTravisMetadata(tt.envs, time.Now)
+			meta, err := newTravisMetadata(&Version{}, tt.envs, time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()

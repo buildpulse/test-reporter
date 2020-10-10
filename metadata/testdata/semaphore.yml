@@ -4,6 +4,8 @@
 :ci_provider: semaphore
 :commit: 1f192ff735f887dd7a25229b2ece0422d17931f5
 :repo_name_with_owner: some-owner/some-repo
+:reporter_os: linux
+:reporter_version: v1.2.3
 :timestamp: 2020-07-11T01:02:03Z
 :semaphore_agent_machine_environment_type: container
 :semaphore_agent_machine_os_image: ubuntu1804

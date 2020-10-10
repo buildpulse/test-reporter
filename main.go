@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/buildpulse/cli/cmd"
+	"github.com/buildpulse/cli/metadata"
 )
 
 // set at buildtime via ldflags
@@ -55,9 +56,9 @@ func main() {
 	case *help || os.Args[1] == "help":
 		fmt.Println(usage)
 	case *version || os.Args[1] == "version":
-		fmt.Printf("BuildPulse Test Reporter %s (%s %s %s)\n", Version, runtime.GOOS, Commit, runtime.Version())
+		fmt.Printf(getVersion().String())
 	case os.Args[1] == "submit" && len(os.Args) > 2:
-		c := cmd.NewSubmit()
+		c := cmd.NewSubmit(getVersion())
 		envs := toMap(os.Environ())
 		if err := c.Init(os.Args[2:], envs); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
@@ -84,4 +85,13 @@ func toMap(pairs []string) map[string]string {
 		m[pair[0]] = pair[1]
 	}
 	return m
+}
+
+func getVersion() *metadata.Version {
+	return &metadata.Version{
+		Commit:    Commit,
+		GoOS:      runtime.GOOS,
+		GoVersion: runtime.Version(),
+		Number:    Version,
+	}
 }

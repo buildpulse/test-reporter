@@ -27,24 +27,26 @@ type AbstractMetadata struct {
 	CIProvider        string    `yaml:":ci_provider"`
 	Commit            string    `yaml:":commit"`
 	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
+	ReporterOS        string    `yaml:":reporter_os"`
+	ReporterVersion   string    `yaml:":reporter_version"`
 	Timestamp         time.Time `yaml:":timestamp"`
 }
 
 // NewMetadata creates a new Metadata instance from the given environment.
-func NewMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func NewMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	switch {
 	case envs["BUILDKITE"] == "true":
-		return newBuildkiteMetadata(envs, now)
+		return newBuildkiteMetadata(version, envs, now)
 	case envs["CIRCLECI"] == "true":
-		return newCircleMetadata(envs, now)
+		return newCircleMetadata(version, envs, now)
 	case envs["GITHUB_ACTIONS"] == "true":
-		return newGithubMetadata(envs, now)
+		return newGithubMetadata(version, envs, now)
 	case envs["JENKINS_HOME"] != "":
-		return newJenkinsMetadata(envs, now)
+		return newJenkinsMetadata(version, envs, now)
 	case envs["SEMAPHORE"] == "true":
-		return newSemaphoreMetadata(envs, now)
+		return newSemaphoreMetadata(version, envs, now)
 	case envs["TRAVIS"] == "true":
-		return newTravisMetadata(envs, now)
+		return newTravisMetadata(version, envs, now)
 	default:
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
@@ -77,8 +79,10 @@ type buildkiteMetadata struct {
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
 }
 
-func newBuildkiteMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newBuildkiteMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &buildkiteMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -134,8 +138,10 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func newCircleMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newCircleMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &circleMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -177,8 +183,10 @@ type githubMetadata struct {
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 }
 
-func newGithubMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newGithubMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &githubMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -231,8 +239,10 @@ type jenkinsMetadata struct {
 	GitURL    string `env:"GIT_URL" yaml:"-"`
 }
 
-func newJenkinsMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newJenkinsMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &jenkinsMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -292,8 +302,10 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func newSemaphoreMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newSemaphoreMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &semaphoreMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err
@@ -348,8 +360,10 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func newTravisMetadata(envs map[string]string, now func() time.Time) (Metadata, error) {
+func newTravisMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
 	m := &travisMetadata{}
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 
 	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
 		return nil, err

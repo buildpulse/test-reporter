@@ -29,9 +29,10 @@ type credentials struct {
 // Submit represents the task of preparing and sending a set of test results to
 // BuildPulse.
 type Submit struct {
-	client *http.Client
-	fs     *flag.FlagSet
-	idgen  func() uuid.UUID
+	client  *http.Client
+	fs      *flag.FlagSet
+	idgen   func() uuid.UUID
+	version *metadata.Version
 
 	envs         map[string]string
 	path         string
@@ -41,11 +42,12 @@ type Submit struct {
 }
 
 // NewSubmit creates a new Submit instance.
-func NewSubmit() *Submit {
+func NewSubmit(version *metadata.Version) *Submit {
 	s := &Submit{
-		client: http.DefaultClient,
-		fs:     flag.NewFlagSet("submit", flag.ContinueOnError),
-		idgen:  uuid.New,
+		client:  http.DefaultClient,
+		fs:      flag.NewFlagSet("submit", flag.ContinueOnError),
+		idgen:   uuid.New,
+		version: version,
 	}
 
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
@@ -101,7 +103,7 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.envs, time.Now)
+	meta, err := metadata.NewMetadata(s.version, s.envs, time.Now)
 	if err != nil {
 		return "", err
 	}
