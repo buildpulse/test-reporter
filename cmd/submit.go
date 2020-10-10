@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"flag"
 	"fmt"
@@ -146,8 +147,8 @@ func toTarGz(dir string) (dest string, err error) {
 	return toGz(tarPath)
 }
 
-// toTar creates a tarball containing the contents of the named directory (dir)
-// and returns the path of the resulting file.
+// toTar creates a tarball containing the submittable contents of the named
+// directory (dir) and returns the path of the resulting file.
 func toTar(dir string) (dest string, err error) {
 	tarfile, err := ioutil.TempFile("", "buildpulse-*.tar")
 	if err != nil {
@@ -158,10 +159,20 @@ func toTar(dir string) (dest string, err error) {
 	writer := tar.NewWriter(tarfile)
 	defer writer.Close()
 
+	isIncludable := func(info os.FileInfo) bool {
+		return info.IsDir() ||
+			filepath.Base(info.Name()) == "buildpulse.yml" ||
+			bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml"))
+	}
+
 	return tarfile.Name(), filepath.Walk(dir,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
+			}
+
+			if !isIncludable(info) {
+				return nil
 			}
 
 			header, err := tar.FileInfoHeader(info, path)
