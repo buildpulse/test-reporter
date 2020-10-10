@@ -322,8 +322,8 @@ func Test_toTarGz(t *testing.T) {
 		filepath.Join(dir, "testdata/example-test-results/junit/browserstack/example-1.xml"),
 	)
 	assertEqualContent(t,
-		"testdata/example-test-results/junit/browserstack/example-2.xml",
-		filepath.Join(dir, "testdata/example-test-results/junit/browserstack/example-2.xml"),
+		"testdata/example-test-results/junit/browserstack/example-2.XML",
+		filepath.Join(dir, "testdata/example-test-results/junit/browserstack/example-2.XML"),
 	)
 	assertEqualContent(t,
 		"testdata/example-test-results/junit/browsertest/example-3.xml",

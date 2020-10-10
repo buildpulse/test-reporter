@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
 	"flag"
 	"fmt"
@@ -164,7 +165,7 @@ func toTar(dir string) (dest string, err error) {
 				return err
 			}
 
-			if !info.IsDir() && filepath.Base(path) != "buildpulse.yml" && filepath.Ext(path) != ".xml" {
+			if !info.IsDir() && filepath.Base(path) != "buildpulse.yml" && !bytes.EqualFold([]byte(filepath.Ext(path)), []byte(".xml")) {
 				return nil
 			}
 
