@@ -166,7 +166,7 @@ func toTar(dir string) (dest string, err error) {
 	}
 
 	return tarfile.Name(), filepath.Walk(dir,
-		func(path string, info os.FileInfo, err error) error {
+		func(srcpath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -175,12 +175,17 @@ func toTar(dir string) (dest string, err error) {
 				return nil
 			}
 
-			header, err := tar.FileInfoHeader(info, path)
+			destpath, err := filepath.Rel(dir, srcpath)
 			if err != nil {
 				return err
 			}
 
-			header.Name = path
+			header, err := tar.FileInfoHeader(info, destpath)
+			if err != nil {
+				return err
+			}
+
+			header.Name = destpath
 			if err := writer.WriteHeader(header); err != nil {
 				return err
 			}
@@ -189,7 +194,7 @@ func toTar(dir string) (dest string, err error) {
 				return nil
 			}
 
-			file, err := os.Open(path)
+			file, err := os.Open(srcpath)
 			if err != nil {
 				return err
 			}

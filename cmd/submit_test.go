@@ -315,25 +315,24 @@ func Test_toTarGz(t *testing.T) {
 	// === Verify original directory content matches resulting directory content
 	assertEqualContent(t,
 		"testdata/example-test-results/buildpulse.yml",
-		filepath.Join(dir, "testdata/example-test-results/buildpulse.yml"),
+		filepath.Join(dir, "buildpulse.yml"),
 	)
 	assertEqualContent(t,
 		"testdata/example-test-results/junit/browserstack/example-1.xml",
-		filepath.Join(dir, "testdata/example-test-results/junit/browserstack/example-1.xml"),
+		filepath.Join(dir, "junit/browserstack/example-1.xml"),
 	)
 	assertEqualContent(t,
 		"testdata/example-test-results/junit/browserstack/example-2.XML",
-		filepath.Join(dir, "testdata/example-test-results/junit/browserstack/example-2.XML"),
+		filepath.Join(dir, "junit/browserstack/example-2.XML"),
 	)
 	assertEqualContent(t,
 		"testdata/example-test-results/junit/browsertest/example-3.xml",
-		filepath.Join(dir, "testdata/example-test-results/junit/browsertest/example-3.xml"),
+		filepath.Join(dir, "junit/browsertest/example-3.xml"),
 	)
 
 	// === Verify tarball excludes files other than buildpulse.yml and XML reports
-	nonXMLPath := "testdata/example-test-results/junit/browsertest/example-3.txt"
-	assert.FileExists(t, nonXMLPath)
-	assert.NoFileExists(t, filepath.Join(dir, nonXMLPath))
+	assert.FileExists(t, "testdata/example-test-results/junit/browsertest/example-3.txt")
+	assert.NoFileExists(t, filepath.Join(dir, "junit/browsertest/example-3.txt"))
 }
 
 func unzip(src io.Reader, dest io.Writer) error {
