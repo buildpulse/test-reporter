@@ -244,7 +244,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 }
 
-func TestNewBuildkiteMetadata_extraFields(t *testing.T) {
+func Test_buildkiteMetadata_initEnvData_extraFields(t *testing.T) {
 	tests := []struct {
 		name          string
 		envs          map[string]string
@@ -287,7 +287,8 @@ func TestNewBuildkiteMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newBuildkiteMetadata(&Version{}, tt.envs, time.Now)
+			meta := buildkiteMetadata{}
+			err := meta.initEnvData(tt.envs)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -299,7 +300,7 @@ func TestNewBuildkiteMetadata_extraFields(t *testing.T) {
 	}
 }
 
-func TestNewCircleMetadata_extraFields(t *testing.T) {
+func Test_circleMetadata_initEnvData_extraFields(t *testing.T) {
 	tests := []struct {
 		name          string
 		envs          map[string]string
@@ -330,7 +331,8 @@ func TestNewCircleMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newCircleMetadata(&Version{}, tt.envs, time.Now)
+			meta := circleMetadata{}
+			err := meta.initEnvData(tt.envs)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -342,7 +344,7 @@ func TestNewCircleMetadata_extraFields(t *testing.T) {
 	}
 }
 
-func TestNewGithubMetadata_refTypes(t *testing.T) {
+func Test_githubMetadata_initEnvData_refTypes(t *testing.T) {
 	tests := []struct {
 		name string
 		envs map[string]string
@@ -370,7 +372,8 @@ func TestNewGithubMetadata_refTypes(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newGithubMetadata(&Version{}, tt.envs, time.Now)
+			meta := githubMetadata{}
+			err := meta.initEnvData(tt.envs)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -380,7 +383,7 @@ func TestNewGithubMetadata_refTypes(t *testing.T) {
 	}
 }
 
-func TestNewTravisMetadata_extraFields(t *testing.T) {
+func Test_travisMetadata_initEnvData_extraFields(t *testing.T) {
 	tests := []struct {
 		name          string
 		envs          map[string]string
@@ -418,7 +421,8 @@ func TestNewTravisMetadata_extraFields(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := newTravisMetadata(&Version{}, tt.envs, time.Now)
+			meta := travisMetadata{}
+			err := meta.initEnvData(tt.envs)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()

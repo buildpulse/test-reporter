@@ -16,6 +16,10 @@ import (
 // executed, etc.
 type Metadata interface {
 	MarshalYAML() (out []byte, err error)
+
+	initEnvData(envs map[string]string) error
+	initTimestamp(now func() time.Time)
+	initVersionData(version *Version)
 }
 
 // AbstractMetadata provides the fields that are common across all Metadata
@@ -32,29 +36,43 @@ type AbstractMetadata struct {
 	Timestamp         time.Time `yaml:":timestamp"`
 }
 
-func (a *AbstractMetadata) initVersion(version *Version) {
+func (a *AbstractMetadata) initTimestamp(now func() time.Time) {
+	a.Timestamp = now()
+}
+
+func (a *AbstractMetadata) initVersionData(version *Version) {
 	a.ReporterOS = version.GoOS
 	a.ReporterVersion = version.Number
 }
 
-// NewMetadata creates a new Metadata instance from the given environment.
+// NewMetadata creates a new Metadata instance from the given args.
 func NewMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
+	var m Metadata
+
 	switch {
 	case envs["BUILDKITE"] == "true":
-		return newBuildkiteMetadata(version, envs, now)
+		m = &buildkiteMetadata{}
 	case envs["CIRCLECI"] == "true":
-		return newCircleMetadata(version, envs, now)
+		m = &circleMetadata{}
 	case envs["GITHUB_ACTIONS"] == "true":
-		return newGithubMetadata(version, envs, now)
+		m = &githubMetadata{}
 	case envs["JENKINS_HOME"] != "":
-		return newJenkinsMetadata(version, envs, now)
+		m = &jenkinsMetadata{}
 	case envs["SEMAPHORE"] == "true":
-		return newSemaphoreMetadata(version, envs, now)
+		m = &semaphoreMetadata{}
 	case envs["TRAVIS"] == "true":
-		return newTravisMetadata(version, envs, now)
+		m = &travisMetadata{}
 	default:
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
+
+	if err := m.initEnvData(envs); err != nil {
+		return nil, err
+	}
+	m.initTimestamp(now)
+	m.initVersionData(version)
+
+	return m, nil
 }
 
 var _ Metadata = (*buildkiteMetadata)(nil)
@@ -84,36 +102,32 @@ type buildkiteMetadata struct {
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
 }
 
-func newBuildkiteMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &buildkiteMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (b *buildkiteMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(b, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.Branch = m.BuildkiteBranch
-	m.BuildURL = m.BuildkiteBuildURL
-	m.CIProvider = "buildkite"
-	m.Commit = m.BuildkiteCommit
-	m.Timestamp = now()
+	b.Branch = b.BuildkiteBranch
+	b.BuildURL = b.BuildkiteBuildURL
+	b.CIProvider = "buildkite"
+	b.Commit = b.BuildkiteCommit
 
-	nwo, err := nameWithOwnerFromGitURL(m.BuildkiteRepoURL)
+	nwo, err := nameWithOwnerFromGitURL(b.BuildkiteRepoURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	m.RepoNameWithOwner = nwo
+	b.RepoNameWithOwner = nwo
 
-	prNum, err := strconv.ParseUint(m.BuildkitePullRequest, 0, 0)
+	prNum, err := strconv.ParseUint(b.BuildkitePullRequest, 0, 0)
 	if err == nil {
-		m.BuildkitePullRequestNumber = uint(prNum)
+		b.BuildkitePullRequestNumber = uint(prNum)
 	}
 
-	if m.Check == "" {
-		m.Check = "buildkite"
+	if b.Check == "" {
+		b.Check = "buildkite"
 	}
 
-	return m, nil
+	return nil
 }
 
 func (b *buildkiteMetadata) MarshalYAML() (out []byte, err error) {
@@ -142,26 +156,22 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func newCircleMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &circleMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (c *circleMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(c, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.Branch = m.CircleBranch
-	m.BuildURL = m.CircleBuildURL
-	m.CIProvider = "circleci"
-	m.Commit = m.CircleSHA1
-	m.RepoNameWithOwner = fmt.Sprintf("%s/%s", m.CircleProjectUsername, m.CircleProjectReponame)
-	m.Timestamp = now()
+	c.Branch = c.CircleBranch
+	c.BuildURL = c.CircleBuildURL
+	c.CIProvider = "circleci"
+	c.Commit = c.CircleSHA1
+	c.RepoNameWithOwner = fmt.Sprintf("%s/%s", c.CircleProjectUsername, c.CircleProjectReponame)
 
-	if m.Check == "" {
-		m.Check = "circleci"
+	if c.Check == "" {
+		c.Check = "circleci"
 	}
 
-	return m, nil
+	return nil
 }
 
 func (c *circleMetadata) MarshalYAML() (out []byte, err error) {
@@ -186,32 +196,28 @@ type githubMetadata struct {
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 }
 
-func newGithubMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &githubMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (g *githubMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.RepoNameWithOwner = m.GithubRepoNWO
-	m.GithubRepoURL = fmt.Sprintf("%s/%s", m.GithubServerURL, m.RepoNameWithOwner)
-	m.BuildURL = fmt.Sprintf("%s/actions/runs/%d", m.GithubRepoURL, m.GithubRunID)
-	m.CIProvider = "github-actions"
-	m.Commit = m.GithubSHA
-	m.Timestamp = now()
+	g.RepoNameWithOwner = g.GithubRepoNWO
+	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.RepoNameWithOwner)
+	g.BuildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
+	g.CIProvider = "github-actions"
+	g.Commit = g.GithubSHA
 
-	branch, err := m.branch()
+	branch, err := g.branch()
 	if err != nil {
-		return nil, err
+		return err
 	}
-	m.Branch = branch
+	g.Branch = branch
 
-	if m.Check == "" {
-		m.Check = "github-actions"
+	if g.Check == "" {
+		g.Check = "github-actions"
 	}
 
-	return m, nil
+	return nil
 }
 
 func (g *githubMetadata) branch() (string, error) {
@@ -241,40 +247,36 @@ type jenkinsMetadata struct {
 	GitURL    string `env:"GIT_URL" yaml:"-"`
 }
 
-func newJenkinsMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &jenkinsMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (j *jenkinsMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.Branch = m.GitBranch
-	m.CIProvider = "jenkins"
-	m.Commit = m.GitCommit
-	m.Timestamp = now()
+	j.Branch = j.GitBranch
+	j.CIProvider = "jenkins"
+	j.Commit = j.GitCommit
 
 	url, ok := envs["BUILD_URL"]
 	if !ok || url == "" {
-		return nil, fmt.Errorf("missing required environment variable: BUILD_URL")
+		return fmt.Errorf("missing required environment variable: BUILD_URL")
 	}
-	m.BuildURL = url
+	j.BuildURL = url
 
-	nwo, err := nameWithOwnerFromGitURL(m.GitURL)
+	nwo, err := nameWithOwnerFromGitURL(j.GitURL)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	m.RepoNameWithOwner = nwo
+	j.RepoNameWithOwner = nwo
 
-	if m.Check == "" {
-		m.Check = "jenkins"
+	if j.Check == "" {
+		j.Check = "jenkins"
 	}
 
-	return m, nil
+	return nil
 }
 
-func (b *jenkinsMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(b)
+func (j *jenkinsMetadata) MarshalYAML() (out []byte, err error) {
+	return marshalYAML(j)
 }
 
 var _ Metadata = (*semaphoreMetadata)(nil)
@@ -303,26 +305,22 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func newSemaphoreMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &semaphoreMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (s *semaphoreMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(s, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.Branch = m.SemaphoreGitBranch
-	m.BuildURL = fmt.Sprintf("%s/workflows/%s", m.SemaphoreOrganizationURL, m.SemaphoreWorkflowID)
-	m.CIProvider = "semaphore"
-	m.Commit = m.SemaphoreGitSHA
-	m.RepoNameWithOwner = m.SemaphoreGitRepoSlug
-	m.Timestamp = now()
+	s.Branch = s.SemaphoreGitBranch
+	s.BuildURL = fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
+	s.CIProvider = "semaphore"
+	s.Commit = s.SemaphoreGitSHA
+	s.RepoNameWithOwner = s.SemaphoreGitRepoSlug
 
-	if m.Check == "" {
-		m.Check = "semaphore"
+	if s.Check == "" {
+		s.Check = "semaphore"
 	}
 
-	return m, nil
+	return nil
 }
 
 func (s *semaphoreMetadata) MarshalYAML() (out []byte, err error) {
@@ -360,31 +358,27 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func newTravisMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
-	m := &travisMetadata{}
-	m.initVersion(version)
-
-	if err := env.Parse(m, env.Options{Environment: envs}); err != nil {
-		return nil, err
+func (t *travisMetadata) initEnvData(envs map[string]string) error {
+	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
+		return err
 	}
 
-	m.Branch = m.TravisBranch
-	m.BuildURL = m.TravisJobWebURL
-	m.CIProvider = "travis-ci"
-	m.Commit = m.TravisCommit
-	m.RepoNameWithOwner = m.TravisRepoSlug
-	m.Timestamp = now()
+	t.Branch = t.TravisBranch
+	t.BuildURL = t.TravisJobWebURL
+	t.CIProvider = "travis-ci"
+	t.Commit = t.TravisCommit
+	t.RepoNameWithOwner = t.TravisRepoSlug
 
-	prNum, err := strconv.ParseUint(m.TravisPullRequest, 0, 0)
+	prNum, err := strconv.ParseUint(t.TravisPullRequest, 0, 0)
 	if err == nil {
-		m.TravisPullRequestNumber = uint(prNum)
+		t.TravisPullRequestNumber = uint(prNum)
 	}
 
-	if m.Check == "" {
-		m.Check = "travis-ci"
+	if t.Check == "" {
+		t.Check = "travis-ci"
 	}
 
-	return m, nil
+	return nil
 }
 
 func (t *travisMetadata) MarshalYAML() (out []byte, err error) {
