@@ -29,7 +29,7 @@ type AbstractMetadata struct {
 	BuildURL          string    `yaml:":build_url"`
 	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"`
 	CIProvider        string    `yaml:":ci_provider"`
-	Commit            string    `yaml:":commit"`
+	CommitSHA         string    `yaml:":commit"`
 	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
 	ReporterOS        string    `yaml:":reporter_os"`
 	ReporterVersion   string    `yaml:":reporter_version"`
@@ -110,7 +110,7 @@ func (b *buildkiteMetadata) initEnvData(envs map[string]string) error {
 	b.Branch = b.BuildkiteBranch
 	b.BuildURL = b.BuildkiteBuildURL
 	b.CIProvider = "buildkite"
-	b.Commit = b.BuildkiteCommit
+	b.CommitSHA = b.BuildkiteCommit
 
 	nwo, err := nameWithOwnerFromGitURL(b.BuildkiteRepoURL)
 	if err != nil {
@@ -164,7 +164,7 @@ func (c *circleMetadata) initEnvData(envs map[string]string) error {
 	c.Branch = c.CircleBranch
 	c.BuildURL = c.CircleBuildURL
 	c.CIProvider = "circleci"
-	c.Commit = c.CircleSHA1
+	c.CommitSHA = c.CircleSHA1
 	c.RepoNameWithOwner = fmt.Sprintf("%s/%s", c.CircleProjectUsername, c.CircleProjectReponame)
 
 	if c.Check == "" {
@@ -205,7 +205,7 @@ func (g *githubMetadata) initEnvData(envs map[string]string) error {
 	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.RepoNameWithOwner)
 	g.BuildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
 	g.CIProvider = "github-actions"
-	g.Commit = g.GithubSHA
+	g.CommitSHA = g.GithubSHA
 
 	branch, err := g.branch()
 	if err != nil {
@@ -254,7 +254,7 @@ func (j *jenkinsMetadata) initEnvData(envs map[string]string) error {
 
 	j.Branch = j.GitBranch
 	j.CIProvider = "jenkins"
-	j.Commit = j.GitCommit
+	j.CommitSHA = j.GitCommit
 
 	url, ok := envs["BUILD_URL"]
 	if !ok || url == "" {
@@ -313,7 +313,7 @@ func (s *semaphoreMetadata) initEnvData(envs map[string]string) error {
 	s.Branch = s.SemaphoreGitBranch
 	s.BuildURL = fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
 	s.CIProvider = "semaphore"
-	s.Commit = s.SemaphoreGitSHA
+	s.CommitSHA = s.SemaphoreGitSHA
 	s.RepoNameWithOwner = s.SemaphoreGitRepoSlug
 
 	if s.Check == "" {
@@ -366,7 +366,7 @@ func (t *travisMetadata) initEnvData(envs map[string]string) error {
 	t.Branch = t.TravisBranch
 	t.BuildURL = t.TravisJobWebURL
 	t.CIProvider = "travis-ci"
-	t.Commit = t.TravisCommit
+	t.CommitSHA = t.TravisCommit
 	t.RepoNameWithOwner = t.TravisRepoSlug
 
 	prNum, err := strconv.ParseUint(t.TravisPullRequest, 0, 0)
