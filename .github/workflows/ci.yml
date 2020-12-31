@@ -46,3 +46,33 @@ jobs:
         curl -fsSL https://github.com/buildpulse/test-reporter/releases/latest/download/test-reporter-linux-amd64 > ./buildpulse-test-reporter
         chmod +x ./buildpulse-test-reporter
         ./buildpulse-test-reporter submit tmp/test-results --account-id 68192324 --repository-id 280914963
+
+  smoke-test:
+    name: Smoke test
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Set up Go 1.x
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.14'
+      id: go
+
+    - name: Check out code into the Go module directory
+      uses: actions/checkout@v2
+
+    - name: Build executable binaries
+      run: ./script/build-for-release $GITHUB_SHA
+
+    - name: Output version
+      run: ./bin/test-reporter-linux-amd64 --version
+
+    - name: Verify binary can successfully package up test results and upload them to BuildPulse
+      env:
+        BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+        BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+      run: |
+        mkdir -p fake-test-results-dir
+        touch fake-test-results-dir/report.xml
+        ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
