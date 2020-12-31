@@ -1,0 +1,26 @@
+version: v1.0
+name: Go
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu1804
+blocks:
+  - name: Smoke test
+    task:
+      jobs:
+        - name: Smoke test
+          commands:
+            - sem-version go 1.14
+            - export GO111MODULE=on
+            - export GOPATH=~/go
+            - 'export PATH=/home/semaphore/go/bin:$PATH'
+            - checkout
+            - sudo apt-get update -y
+            - sudo apt-get install -y upx
+            - ./script/build-for-release $SEMAPHORE_GIT_SHA
+            - ./bin/test-reporter-linux-amd64 --version
+            - mkdir -p fake-test-results-dir
+            - touch fake-test-results-dir/report.xml
+            - ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
+      secrets:
+        - name: buildpulse-credentials
