@@ -1,0 +1,13 @@
+language: go
+
+go:
+- 1.14.x
+
+script:
+  - sudo apt-get update -y
+  - sudo apt-get install -y upx
+  - ./script/build-for-release $TRAVIS_COMMIT
+  - ./bin/test-reporter-linux-amd64 --version
+  - mkdir -p fake-test-results-dir
+  - touch fake-test-results-dir/report.xml
+  - ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
