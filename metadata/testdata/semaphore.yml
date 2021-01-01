@@ -1,8 +1,15 @@
+:authored_at: 2020-07-09T04:05:06-05:00
+:author_email: some-author@example.com
+:author_name: Some Author
 :branch: some-branch
 :build_url: https://some-owner.semaphoreci.com/workflows/22222222-2222-2222-2222-222222222222
 :check: semaphore
 :ci_provider: semaphore
+:commit_message: Some message
 :commit: 1f192ff735f887dd7a25229b2ece0422d17931f5
+:committed_at: 2020-07-10T07:08:09+13:00
+:committer_email: some-committer@example.com
+:committer_name: Some Committer
 :repo_name_with_owner: some-owner/some-repo
 :reporter_os: linux
 :reporter_version: v1.2.3

@@ -25,11 +25,18 @@ type Metadata interface {
 // AbstractMetadata provides the fields that are common across all Metadata
 // instances, regardless of the specific CI provider.
 type AbstractMetadata struct {
+	AuthoredAt        time.Time `yaml:":authored_at"`
+	AuthorEmail       string    `yaml:":author_email"`
+	AuthorName        string    `yaml:":author_name"`
 	Branch            string    `yaml:":branch"`
 	BuildURL          string    `yaml:":build_url"`
 	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"`
 	CIProvider        string    `yaml:":ci_provider"`
+	CommitMessage     string    `yaml:":commit_message"`
 	CommitSHA         string    `yaml:":commit"`
+	CommittedAt       time.Time `yaml:":committed_at"`
+	CommitterEmail    string    `yaml:":committer_email"`
+	CommitterName     string    `yaml:":committer_name"`
 	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
 	ReporterOS        string    `yaml:":reporter_os"`
 	ReporterVersion   string    `yaml:":reporter_version"`
@@ -43,7 +50,14 @@ func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
 		return err
 	}
 
+	a.AuthoredAt = c.AuthoredAt
+	a.AuthorEmail = c.AuthorEmail
+	a.AuthorName = c.AuthorName
+	a.CommitMessage = c.Message
 	a.CommitSHA = c.SHA
+	a.CommittedAt = c.CommittedAt
+	a.CommitterEmail = c.CommitterEmail
+	a.CommitterName = c.CommitterName
 	a.TreeSHA = c.TreeSHA
 
 	return nil

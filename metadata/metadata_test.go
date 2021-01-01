@@ -148,11 +148,24 @@ func TestNewMetadata(t *testing.T) {
 			expected, err := ioutil.ReadFile(tt.fixture)
 			require.NoError(t, err)
 
+			authoredAt, err := time.Parse(time.RFC3339, "2020-07-09T04:05:06-05:00")
+			require.NoError(t, err)
+
+			committedAt, err := time.Parse(time.RFC3339, "2020-07-10T07:08:09+13:00")
+			require.NoError(t, err)
+
 			commitResolverDouble := CommitResolverFunc(
 				func(sha string) (*Commit, error) {
 					return &Commit{
-						SHA:     sha,
-						TreeSHA: "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
+						AuthoredAt:     authoredAt,
+						AuthorEmail:    "some-author@example.com",
+						AuthorName:     "Some Author",
+						CommittedAt:    committedAt,
+						CommitterEmail: "some-committer@example.com",
+						CommitterName:  "Some Committer",
+						Message:        "Some message",
+						SHA:            sha,
+						TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
 					}, nil
 				})
 
