@@ -1,8 +1,6 @@
 package metadata
 
 import (
-	"io/ioutil"
-	"os"
 	"path"
 	"testing"
 	"time"
@@ -13,22 +11,15 @@ import (
 )
 
 func TestNewCommitResolver_invalidRepo(t *testing.T) {
-	dir, err := ioutil.TempDir(os.TempDir(), "buildpulse-new-commit-resolver-")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	_, err = NewCommitResolver(dir)
+	_, err := NewCommitResolver(t.TempDir())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "no repository found")
 	}
 }
 
 func Test_repositoryCommitResolver_Lookup(t *testing.T) {
-	dir, err := ioutil.TempDir(os.TempDir(), "buildpulse-repository-commit-resolver-")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	err = copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
+	dir := t.TempDir()
+	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
 	r, err := NewCommitResolver(dir)
@@ -50,11 +41,8 @@ func Test_repositoryCommitResolver_Lookup(t *testing.T) {
 }
 
 func Test_repositoryCommitResolver_Lookup_notFound(t *testing.T) {
-	dir, err := ioutil.TempDir(os.TempDir(), "buildpulse-repository-commit-resolver-")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
-
-	err = copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
+	dir := t.TempDir()
+	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
 	r, err := NewCommitResolver(dir)
