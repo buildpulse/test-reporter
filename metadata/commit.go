@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
@@ -9,8 +10,15 @@ import (
 
 // Commit represents the metadata for a Git commit.
 type Commit struct {
-	SHA     string
-	TreeSHA string
+	AuthoredAt     time.Time
+	AuthorEmail    string
+	AuthorName     string
+	CommittedAt    time.Time
+	CommitterEmail string
+	CommitterName  string
+	Message        string
+	SHA            string
+	TreeSHA        string
 }
 
 // A CommitResolver provides the ability to look up a commit.
@@ -58,7 +66,14 @@ func (r *repositoryCommitResolver) Lookup(sha string) (*Commit, error) {
 	}
 
 	return &Commit{
-		SHA:     sha,
-		TreeSHA: c.TreeHash.String(),
+		AuthoredAt:     c.Author.When,
+		AuthorEmail:    c.Author.Email,
+		AuthorName:     c.Author.Name,
+		CommittedAt:    c.Committer.When,
+		CommitterEmail: c.Committer.Email,
+		CommitterName:  c.Committer.Name,
+		Message:        c.Message,
+		SHA:            c.Hash.String(),
+		TreeSHA:        c.TreeHash.String(),
 	}, nil
 }
