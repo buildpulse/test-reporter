@@ -173,9 +173,7 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 }
 
 func TestSubmit_Run(t *testing.T) {
-	dir, err := ioutil.TempDir("", "buildpulse-cli-test-fixture")
-	require.NoError(t, err)
-	defer os.RemoveAll(dir)
+	dir := t.TempDir()
 
 	r, err := recorder.New("testdata/s3-success")
 	require.NoError(t, err)
@@ -305,12 +303,10 @@ func Test_toTarGz(t *testing.T) {
 	require.NoError(t, err)
 
 	// === Untar
-	dir, err := ioutil.TempDir("", "buildpulse-untar-")
-	require.NoError(t, err)
-
 	tarfile, err = os.Open(tarfile.Name())
 	require.NoError(t, err)
 
+	dir := t.TempDir()
 	err = untar(tarfile, dir)
 	require.NoError(t, err)
 
