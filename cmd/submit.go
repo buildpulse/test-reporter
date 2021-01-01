@@ -55,7 +55,7 @@ func NewSubmit(version *metadata.Version) *Submit {
 
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
-	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local close of repository")
+	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
 
 	return s
