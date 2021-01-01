@@ -17,7 +17,7 @@ import (
 type Metadata interface {
 	MarshalYAML() (out []byte, err error)
 
-	initEnvData(envs map[string]string) error
+	initEnvData(envs map[string]string, resolver CommitResolver) error
 	initTimestamp(now func() time.Time)
 	initVersionData(version *Version)
 }
@@ -34,6 +34,19 @@ type AbstractMetadata struct {
 	ReporterOS        string    `yaml:":reporter_os"`
 	ReporterVersion   string    `yaml:":reporter_version"`
 	Timestamp         time.Time `yaml:":timestamp"`
+	TreeSHA           string    `yaml:":tree"`
+}
+
+func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
+	c, err := cr.Lookup(sha)
+	if err != nil {
+		return err
+	}
+
+	a.CommitSHA = c.SHA
+	a.TreeSHA = c.TreeSHA
+
+	return nil
 }
 
 func (a *AbstractMetadata) initTimestamp(now func() time.Time) {
@@ -46,7 +59,7 @@ func (a *AbstractMetadata) initVersionData(version *Version) {
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, now func() time.Time) (Metadata, error) {
+func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time) (Metadata, error) {
 	var m Metadata
 
 	switch {
@@ -66,7 +79,7 @@ func NewMetadata(version *Version, envs map[string]string, now func() time.Time)
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
 
-	if err := m.initEnvData(envs); err != nil {
+	if err := m.initEnvData(envs, resolver); err != nil {
 		return nil, err
 	}
 	m.initTimestamp(now)
@@ -102,15 +115,18 @@ type buildkiteMetadata struct {
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
 }
 
-func (b *buildkiteMetadata) initEnvData(envs map[string]string) error {
+func (b *buildkiteMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(b, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := b.initCommitData(resolver, b.BuildkiteCommit); err != nil {
 		return err
 	}
 
 	b.Branch = b.BuildkiteBranch
 	b.BuildURL = b.BuildkiteBuildURL
 	b.CIProvider = "buildkite"
-	b.CommitSHA = b.BuildkiteCommit
 
 	nwo, err := nameWithOwnerFromGitURL(b.BuildkiteRepoURL)
 	if err != nil {
@@ -156,15 +172,18 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func (c *circleMetadata) initEnvData(envs map[string]string) error {
+func (c *circleMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(c, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := c.initCommitData(resolver, c.CircleSHA1); err != nil {
 		return err
 	}
 
 	c.Branch = c.CircleBranch
 	c.BuildURL = c.CircleBuildURL
 	c.CIProvider = "circleci"
-	c.CommitSHA = c.CircleSHA1
 	c.RepoNameWithOwner = fmt.Sprintf("%s/%s", c.CircleProjectUsername, c.CircleProjectReponame)
 
 	if c.Check == "" {
@@ -196,8 +215,12 @@ type githubMetadata struct {
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 }
 
-func (g *githubMetadata) initEnvData(envs map[string]string) error {
+func (g *githubMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := g.initCommitData(resolver, g.GithubSHA); err != nil {
 		return err
 	}
 
@@ -205,7 +228,6 @@ func (g *githubMetadata) initEnvData(envs map[string]string) error {
 	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.RepoNameWithOwner)
 	g.BuildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
 	g.CIProvider = "github-actions"
-	g.CommitSHA = g.GithubSHA
 
 	branch, err := g.branch()
 	if err != nil {
@@ -247,14 +269,17 @@ type jenkinsMetadata struct {
 	GitURL    string `env:"GIT_URL" yaml:"-"`
 }
 
-func (j *jenkinsMetadata) initEnvData(envs map[string]string) error {
+func (j *jenkinsMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := j.initCommitData(resolver, j.GitCommit); err != nil {
 		return err
 	}
 
 	j.Branch = j.GitBranch
 	j.CIProvider = "jenkins"
-	j.CommitSHA = j.GitCommit
 
 	url, ok := envs["BUILD_URL"]
 	if !ok || url == "" {
@@ -305,15 +330,18 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func (s *semaphoreMetadata) initEnvData(envs map[string]string) error {
+func (s *semaphoreMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(s, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := s.initCommitData(resolver, s.SemaphoreGitSHA); err != nil {
 		return err
 	}
 
 	s.Branch = s.SemaphoreGitBranch
 	s.BuildURL = fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
 	s.CIProvider = "semaphore"
-	s.CommitSHA = s.SemaphoreGitSHA
 	s.RepoNameWithOwner = s.SemaphoreGitRepoSlug
 
 	if s.Check == "" {
@@ -358,15 +386,18 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func (t *travisMetadata) initEnvData(envs map[string]string) error {
+func (t *travisMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
 	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	if err := t.initCommitData(resolver, t.TravisCommit); err != nil {
 		return err
 	}
 
 	t.Branch = t.TravisBranch
 	t.BuildURL = t.TravisJobWebURL
 	t.CIProvider = "travis-ci"
-	t.CommitSHA = t.TravisCommit
 	t.RepoNameWithOwner = t.TravisRepoSlug
 
 	prNum, err := strconv.ParseUint(t.TravisPullRequest, 0, 0)

@@ -44,6 +44,8 @@ func TestSubmit_Init(t *testing.T) {
 	assert.Equal(t, "some-access-key-id", s.credentials.AccessKeyID)
 	assert.Equal(t, "some-secret-access-key", s.credentials.SecretAccessKey)
 	assert.Equal(t, exampleEnv, s.envs)
+	assert.Equal(t, ".", s.repositoryPath)
+	assert.NotNil(t, s.commitResolver)
 }
 
 func TestSubmit_Init_invalidArgs(t *testing.T) {
@@ -172,6 +174,57 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 	})
 }
 
+func TestSubmit_Init_invalidRepoPath(t *testing.T) {
+	t.Run("NonRepoPath", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{})
+		err := s.Init([]string{
+			".",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+			"--repository-dir", os.TempDir(),
+		},
+			exampleEnv,
+		)
+		if assert.Error(t, err) {
+			assert.Regexp(t, "invalid value for flag -repository-dir: no repository found at ", err.Error())
+		}
+	})
+
+	t.Run("NonexistentRepoPath", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{})
+		err := s.Init([]string{
+			".",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+			"--repository-dir", filepath.Join(os.TempDir(), "some-nonexistent-path"),
+		},
+			exampleEnv,
+		)
+		if assert.Error(t, err) {
+			assert.Regexp(t, "invalid value for flag -repository-dir: .* is not a directory", err.Error())
+		}
+	})
+
+	t.Run("NonDirectoryRepoPath", func(t *testing.T) {
+		tmpfile, err := ioutil.TempFile(os.TempDir(), "buildpulse-cli-test-fixture")
+		require.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+
+		s := NewSubmit(&metadata.Version{})
+		err = s.Init([]string{
+			".",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+			"--repository-dir", tmpfile.Name(),
+		},
+			exampleEnv,
+		)
+		if assert.Error(t, err) {
+			assert.Regexp(t, "invalid value for flag -repository-dir: .* is not a directory", err.Error())
+		}
+	})
+}
+
 func TestSubmit_Run(t *testing.T) {
 	dir, err := ioutil.TempDir("", "buildpulse-cli-test-fixture")
 	require.NoError(t, err)
@@ -188,14 +241,23 @@ func TestSubmit_Run(t *testing.T) {
 		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
 	}
 
+	commitResolverDouble := metadata.CommitResolverFunc(
+		func(sha string) (*metadata.Commit, error) {
+			return &metadata.Commit{
+				SHA:     sha,
+				TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd",
+			}, nil
+		})
+
 	s := &Submit{
-		client:       &http.Client{Transport: r},
-		idgen:        func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
-		version:      &metadata.Version{Number: "v1.2.3"},
-		envs:         envs,
-		path:         dir,
-		accountID:    42,
-		repositoryID: 8675309,
+		client:         &http.Client{Transport: r},
+		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
+		version:        &metadata.Version{Number: "v1.2.3"},
+		commitResolver: commitResolverDouble,
+		envs:           envs,
+		path:           dir,
+		accountID:      42,
+		repositoryID:   8675309,
 		credentials: credentials{
 			AccessKeyID:     accessKeyID,
 			SecretAccessKey: secretAccessKey,
@@ -209,6 +271,7 @@ func TestSubmit_Run(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(yaml), ":ci_provider: github-actions")
 	assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
+	assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
 	assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
 
 	assert.Equal(t, "8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)

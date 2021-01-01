@@ -35,11 +35,13 @@ type Submit struct {
 	idgen   func() uuid.UUID
 	version *metadata.Version
 
-	envs         map[string]string
-	path         string
-	accountID    uint64
-	repositoryID uint64
-	credentials  credentials
+	envs           map[string]string
+	path           string
+	accountID      uint64
+	repositoryID   uint64
+	repositoryPath string
+	credentials    credentials
+	commitResolver metadata.CommitResolver
 }
 
 // NewSubmit creates a new Submit instance.
@@ -53,6 +55,7 @@ func NewSubmit(version *metadata.Version) *Submit {
 
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
+	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local close of repository")
 	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
 
 	return s
@@ -96,6 +99,15 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	}
 	s.credentials.SecretAccessKey = key
 
+	info, err = os.Stat(s.repositoryPath)
+	if err != nil || !info.IsDir() {
+		return fmt.Errorf("invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
+	}
+	s.commitResolver, err = metadata.NewCommitResolver(s.repositoryPath)
+	if err != nil {
+		return fmt.Errorf("invalid value for flag -repository-dir: %v", err)
+	}
+
 	s.envs = envs
 
 	return nil
@@ -104,7 +116,7 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.version, s.envs, time.Now)
+	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now)
 	if err != nil {
 		return "", err
 	}
