@@ -309,6 +309,8 @@ func Test_toTarGz(t *testing.T) {
 	require.NoError(t, err)
 
 	tarfile, err = os.Open(tarfile.Name())
+	require.NoError(t, err)
+
 	err = untar(tarfile, dir)
 	require.NoError(t, err)
 
