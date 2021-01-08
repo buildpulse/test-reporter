@@ -148,8 +148,29 @@ func TestNewMetadata(t *testing.T) {
 			expected, err := ioutil.ReadFile(tt.fixture)
 			require.NoError(t, err)
 
+			authoredAt, err := time.Parse(time.RFC3339, "2020-07-09T04:05:06-05:00")
+			require.NoError(t, err)
+
+			committedAt, err := time.Parse(time.RFC3339, "2020-07-10T07:08:09+13:00")
+			require.NoError(t, err)
+
+			commitResolverDouble := CommitResolverFunc(
+				func(sha string) (*Commit, error) {
+					return &Commit{
+						AuthoredAt:     authoredAt,
+						AuthorEmail:    "some-author@example.com",
+						AuthorName:     "Some Author",
+						CommittedAt:    committedAt,
+						CommitterEmail: "some-committer@example.com",
+						CommitterName:  "Some Committer",
+						Message:        "Some message",
+						SHA:            sha,
+						TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
+					}, nil
+				})
+
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, now)
+			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -160,7 +181,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, time.Now)
+	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now)
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -233,7 +254,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, time.Now)
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now)
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -288,7 +309,7 @@ func Test_buildkiteMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := buildkiteMetadata{}
-			err := meta.initEnvData(tt.envs)
+			err := meta.initEnvData(tt.envs, newCommitResolverStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -332,7 +353,7 @@ func Test_circleMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := circleMetadata{}
-			err := meta.initEnvData(tt.envs)
+			err := meta.initEnvData(tt.envs, newCommitResolverStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -373,7 +394,7 @@ func Test_githubMetadata_initEnvData_refTypes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := githubMetadata{}
-			err := meta.initEnvData(tt.envs)
+			err := meta.initEnvData(tt.envs, newCommitResolverStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -422,7 +443,7 @@ func Test_travisMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := travisMetadata{}
-			err := meta.initEnvData(tt.envs)
+			err := meta.initEnvData(tt.envs, newCommitResolverStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -457,4 +478,11 @@ func Test_nameWithOwnerFromGitURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newCommitResolverStub() CommitResolver {
+	return CommitResolverFunc(
+		func(sha string) (*Commit, error) {
+			return &Commit{}, nil
+		})
 }

@@ -24,8 +24,9 @@ USAGE
 	$ %s submit TEST_RESULTS_DIR --account-id=ACCOUNT_ID --repository-id=REPOSITORY_ID
 
 FLAGS
-  --account-id     BuildPulse account ID for the account that owns the repository
-  --repository-id  BuildPulse repository ID for the repository that produced the test results
+  --account-id       BuildPulse account ID for the account that owns the repository
+  --repository-id    BuildPulse repository ID for the repository that produced the test results
+  --repository-dir   Path to local git clone of the repository (default: ".")
 
 ENVIRONMENT VARIABLES
 	Set the following environment variables:
