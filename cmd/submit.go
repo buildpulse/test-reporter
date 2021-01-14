@@ -101,12 +101,11 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 
 	info, err = os.Stat(s.repositoryPath)
 	if err != nil || !info.IsDir() {
-		return fmt.Errorf("[experimental] invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
+		return fmt.Errorf("invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
 	}
 	s.commitResolver, err = metadata.NewCommitResolver(s.repositoryPath)
 	if err != nil {
-		// Git metadata functionality is experimental. While it's experimental, don't let an invalid repository prevent the test-reporter from continuing normal operation.
-		fmt.Fprintf(os.Stderr, "[experimental] invalid value for flag -repository-dir: %v\n", err)
+		return fmt.Errorf("invalid value for flag -repository-dir: %v", err)
 	}
 
 	s.envs = envs

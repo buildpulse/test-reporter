@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -26,41 +25,29 @@ type Metadata interface {
 // AbstractMetadata provides the fields that are common across all Metadata
 // instances, regardless of the specific CI provider.
 type AbstractMetadata struct {
-	AuthoredAt        time.Time `yaml:":authored_at,omitempty"`
-	AuthorEmail       string    `yaml:":author_email,omitempty"`
-	AuthorName        string    `yaml:":author_name,omitempty"`
+	AuthoredAt        time.Time `yaml:":authored_at"`
+	AuthorEmail       string    `yaml:":author_email"`
+	AuthorName        string    `yaml:":author_name"`
 	Branch            string    `yaml:":branch"`
 	BuildURL          string    `yaml:":build_url"`
 	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"`
 	CIProvider        string    `yaml:":ci_provider"`
-	CommitMessage     string    `yaml:":commit_message,omitempty"`
+	CommitMessage     string    `yaml:":commit_message"`
 	CommitSHA         string    `yaml:":commit"`
-	CommittedAt       time.Time `yaml:":committed_at,omitempty"`
-	CommitterEmail    string    `yaml:":committer_email,omitempty"`
-	CommitterName     string    `yaml:":committer_name,omitempty"`
+	CommittedAt       time.Time `yaml:":committed_at"`
+	CommitterEmail    string    `yaml:":committer_email"`
+	CommitterName     string    `yaml:":committer_name"`
 	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
 	ReporterOS        string    `yaml:":reporter_os"`
 	ReporterVersion   string    `yaml:":reporter_version"`
 	Timestamp         time.Time `yaml:":timestamp"`
-	TreeSHA           string    `yaml:":tree,omitempty"`
+	TreeSHA           string    `yaml:":tree"`
 }
 
 func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
-	// Git metadata functionality is experimental. While it's experimental, detect a nil CommitResolver and allow the commit metadata fields to be uploaded with empty values.
-	if cr == nil {
-		fmt.Fprintf(os.Stderr, "[experimental] no commit resolver available; falling back to commit data from environment\n")
-
-		a.CommitSHA = sha
-		return nil
-	}
-
-	// Git metadata functionality is experimental. While it's experimental, don't let this error prevent the test-reporter from continuing normal operation. Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[experimental] git-based commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
-
-		a.CommitSHA = sha
-		return nil
+		return err
 	}
 
 	a.AuthoredAt = c.AuthoredAt

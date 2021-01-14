@@ -176,7 +176,6 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 
 func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 	t.Run("NonRepoPath", func(t *testing.T) {
-		t.Skip("skipping while git metadata functionality is experimental")
 		s := NewSubmit(&metadata.Version{})
 		err := s.Init([]string{
 			".",
