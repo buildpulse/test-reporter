@@ -66,7 +66,7 @@ func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
 	a.AuthoredAt = c.AuthoredAt
 	a.AuthorEmail = c.AuthorEmail
 	a.AuthorName = c.AuthorName
-	a.CommitMessage = c.Message
+	a.CommitMessage = strings.TrimSpace(c.Message)
 	a.CommitSHA = c.SHA
 	a.CommittedAt = c.CommittedAt
 	a.CommitterEmail = c.CommitterEmail
