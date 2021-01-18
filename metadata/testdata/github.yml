@@ -17,6 +17,7 @@
 :tree: 0da9df599c02da5e7f5058b7108dcd5e1929a0fe
 :github_actor: some-user
 :github_base_ref: refs/heads/main
+:github_event_name: push
 :github_head_ref: refs/heads/some-feature
 :github_ref: refs/heads/some-feature
 :github_repo_url: https://github.com/some-owner/some-repo

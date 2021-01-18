@@ -60,6 +60,7 @@ func TestNewMetadata(t *testing.T) {
 				"GITHUB_ACTIONS":    "true",
 				"GITHUB_ACTOR":      "some-user",
 				"GITHUB_BASE_REF":   "refs/heads/main",
+				"GITHUB_EVENT_NAME": "push",
 				"GITHUB_HEAD_REF":   "refs/heads/some-feature",
 				"GITHUB_REF":        "refs/heads/some-feature",
 				"GITHUB_REPOSITORY": "some-owner/some-repo",

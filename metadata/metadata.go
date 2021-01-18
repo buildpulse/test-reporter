@@ -218,6 +218,7 @@ type githubMetadata struct {
 
 	GithubActor     string `env:"GITHUB_ACTOR" yaml:":github_actor"`
 	GithubBaseRef   string `env:"GITHUB_BASE_REF" yaml:":github_base_ref"`
+	GithubEventName string `env:"GITHUB_EVENT_NAME" yaml:":github_event_name"`
 	GithubHeadRef   string `env:"GITHUB_HEAD_REF" yaml:":github_head_ref"`
 	GithubRef       string `env:"GITHUB_REF" yaml:":github_ref"`
 	GithubRepoNWO   string `env:"GITHUB_REPOSITORY" yaml:"-"`
