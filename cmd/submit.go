@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -30,10 +31,11 @@ type credentials struct {
 // Submit represents the task of preparing and sending a set of test results to
 // BuildPulse.
 type Submit struct {
-	client  *http.Client
-	fs      *flag.FlagSet
-	idgen   func() uuid.UUID
-	version *metadata.Version
+	client      *http.Client
+	fs          *flag.FlagSet
+	idgen       func() uuid.UUID
+	version     *metadata.Version
+	diagnostics []string
 
 	envs           map[string]string
 	path           string
@@ -64,6 +66,14 @@ func NewSubmit(version *metadata.Version) *Submit {
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
 func (s *Submit) Init(args []string, envs map[string]string) error {
+	s.appendDiagnostics(fmt.Sprintf("args: %+v", args))
+
+	dir, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	s.appendDiagnostics(fmt.Sprintf("working directory: %v", dir))
+
 	s.path = args[0]
 	isFlag, err := regexp.MatchString("^-", s.path)
 	if err != nil {
@@ -106,7 +116,9 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	s.commitResolver, err = metadata.NewCommitResolver(s.repositoryPath)
 	if err != nil {
 		// Git metadata functionality is experimental. While it's experimental, don't let an invalid repository prevent the test-reporter from continuing normal operation.
-		fmt.Fprintf(os.Stderr, "[experimental] invalid value for flag -repository-dir: %v\n", err)
+		warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
+		s.appendDiagnostics(fmt.Sprintf("warning: %v", warning))
+		fmt.Fprintf(os.Stderr, warning)
 	}
 
 	s.envs = envs
@@ -131,6 +143,11 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
+	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(strings.Join(s.diagnostics, "\n")), 0644)
+	if err != nil {
+		return "", err
+	}
+
 	path, err := toTarGz(s.path)
 
 	return s.upload(path)
@@ -147,6 +164,10 @@ func (s *Submit) upload(path string) (string, error) {
 	}
 
 	return key, nil
+}
+
+func (s *Submit) appendDiagnostics(entry string) {
+	s.diagnostics = append(s.diagnostics, entry)
 }
 
 // toTarGz creates a gzipped tarball containing the contents of the named
@@ -174,6 +195,7 @@ func toTar(dir string) (dest string, err error) {
 
 	isIncludable := func(info os.FileInfo) bool {
 		return info.IsDir() ||
+			filepath.Base(info.Name()) == "buildpulse.log" ||
 			filepath.Base(info.Name()) == "buildpulse.yml" ||
 			bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml"))
 	}
