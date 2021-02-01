@@ -9,6 +9,6 @@ require (
 	github.com/go-git/go-git/v5 v5.2.0
 	github.com/google/uuid v1.2.0
 	github.com/otiai10/copy v1.4.1
-	github.com/stretchr/testify v1.6.1
+	github.com/stretchr/testify v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
 )
