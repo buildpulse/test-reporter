@@ -292,9 +292,14 @@ var _ Metadata = (*jenkinsMetadata)(nil)
 type jenkinsMetadata struct {
 	AbstractMetadata `yaml:",inline"`
 
-	GitBranch string `env:"GIT_BRANCH" yaml:"-"`
-	GitCommit string `env:"GIT_COMMIT" yaml:"-"`
-	GitURL    string `env:"GIT_URL" yaml:"-"`
+	GitBranch             string `env:"GIT_BRANCH" yaml:"-"`
+	GitCommit             string `env:"GIT_COMMIT" yaml:"-"`
+	GitURL                string `env:"GIT_URL" yaml:"-"`
+	JenkinsExecutorNumber uint   `env:"EXECUTOR_NUMBER" yaml:":jenkins_executor_number"`
+	JenkinsJobName        string `env:"JOB_NAME" yaml:":jenkins_job_name"`
+	JenkinsJobURL         string `env:"JOB_URL" yaml:":jenkins_job_url"`
+	JenkinsNodeName       string `env:"NODE_NAME" yaml:":jenkins_node_name"`
+	JenkinsWorkspace      string `env:"WORKSPACE" yaml:":jenkins_workspace"`
 }
 
 func (j *jenkinsMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
