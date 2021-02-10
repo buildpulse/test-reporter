@@ -28,14 +28,27 @@ type credentials struct {
 	SecretAccessKey string
 }
 
+type log struct {
+	entries []string
+}
+
+func (l *log) Printf(format string, v ...interface{}) {
+	l.entries = append(l.entries, fmt.Sprintf(format, v...))
+	fmt.Printf(format, v...)
+}
+
+func (l *log) Text() string {
+	return strings.Join(l.entries, "\n")
+}
+
 // Submit represents the task of preparing and sending a set of test results to
 // BuildPulse.
 type Submit struct {
 	client      *http.Client
+	diagnostics *log
 	fs          *flag.FlagSet
 	idgen       func() uuid.UUID
 	version     *metadata.Version
-	diagnostics []string
 
 	envs           map[string]string
 	path           string
@@ -49,10 +62,11 @@ type Submit struct {
 // NewSubmit creates a new Submit instance.
 func NewSubmit(version *metadata.Version) *Submit {
 	s := &Submit{
-		client:  http.DefaultClient,
-		fs:      flag.NewFlagSet("submit", flag.ContinueOnError),
-		idgen:   uuid.New,
-		version: version,
+		client:      http.DefaultClient,
+		diagnostics: &log{},
+		fs:          flag.NewFlagSet("submit", flag.ContinueOnError),
+		idgen:       uuid.New,
+		version:     version,
 	}
 
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
@@ -66,13 +80,13 @@ func NewSubmit(version *metadata.Version) *Submit {
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
 func (s *Submit) Init(args []string, envs map[string]string) error {
-	s.appendDiagnostics(fmt.Sprintf("args: %+v", args))
+	s.diagnostics.Printf("args: %+v", args)
 
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	s.appendDiagnostics(fmt.Sprintf("working directory: %v", dir))
+	s.diagnostics.Printf("working directory: %v", dir)
 
 	s.path = args[0]
 	isFlag, err := regexp.MatchString("^-", s.path)
@@ -117,7 +131,7 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	if err != nil {
 		// Git metadata functionality is experimental. While it's experimental, don't let an invalid repository prevent the test-reporter from continuing normal operation.
 		warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
-		s.appendDiagnostics(fmt.Sprintf("warning: %v", warning))
+		s.diagnostics.Printf("warning: %v", warning)
 		fmt.Fprintf(os.Stderr, warning)
 	}
 
@@ -143,7 +157,7 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(strings.Join(s.diagnostics, "\n")), 0644)
+	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(s.diagnostics.Text()), 0644)
 	if err != nil {
 		return "", err
 	}
@@ -164,10 +178,6 @@ func (s *Submit) upload(path string) (string, error) {
 	}
 
 	return key, nil
-}
-
-func (s *Submit) appendDiagnostics(entry string) {
-	s.diagnostics = append(s.diagnostics, entry)
 }
 
 // toTarGz creates a gzipped tarball containing the contents of the named

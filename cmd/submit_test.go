@@ -250,6 +250,7 @@ func TestSubmit_Run(t *testing.T) {
 
 	s := &Submit{
 		client:         &http.Client{Transport: r},
+		diagnostics:    &log{},
 		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
 		version:        &metadata.Version{Number: "v1.2.3"},
 		commitResolver: commitResolverDouble,
@@ -331,6 +332,7 @@ func Test_upload(t *testing.T) {
 
 			s := &Submit{
 				client:       &http.Client{Transport: r},
+				diagnostics:  &log{},
 				idgen:        func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
 				accountID:    tt.accountID,
 				repositoryID: 8675309,
