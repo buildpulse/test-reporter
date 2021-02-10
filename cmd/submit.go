@@ -143,7 +143,7 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now)
+	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.diagnostics)
 	if err != nil {
 		return "", err
 	}

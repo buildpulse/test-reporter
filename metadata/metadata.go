@@ -2,7 +2,6 @@ package metadata
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,9 +17,14 @@ import (
 type Metadata interface {
 	MarshalYAML() (out []byte, err error)
 
-	initEnvData(envs map[string]string, resolver CommitResolver) error
+	initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error
 	initTimestamp(now func() time.Time)
 	initVersionData(version *Version)
+}
+
+// Logger -- TODO Add docs
+type Logger interface {
+	Printf(format string, v ...interface{})
 }
 
 // AbstractMetadata provides the fields that are common across all Metadata
@@ -45,10 +49,10 @@ type AbstractMetadata struct {
 	TreeSHA           string    `yaml:":tree,omitempty"`
 }
 
-func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
+func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string, log Logger) error {
 	// Git metadata functionality is experimental. While it's experimental, detect a nil CommitResolver and allow the commit metadata fields to be uploaded with empty values.
 	if cr == nil {
-		fmt.Fprintf(os.Stderr, "[experimental] no commit resolver available; falling back to commit data from environment\n")
+		log.Printf("[experimental] no commit resolver available; falling back to commit data from environment\n")
 
 		a.CommitSHA = sha
 		return nil
@@ -57,7 +61,7 @@ func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string) error {
 	// Git metadata functionality is experimental. While it's experimental, don't let this error prevent the test-reporter from continuing normal operation. Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[experimental] git-based commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
+		log.Printf("[experimental] git-based commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
 
 		a.CommitSHA = sha
 		return nil
@@ -86,7 +90,7 @@ func (a *AbstractMetadata) initVersionData(version *Version) {
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time) (Metadata, error) {
+func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log Logger) (Metadata, error) {
 	var m Metadata
 
 	switch {
@@ -106,7 +110,7 @@ func NewMetadata(version *Version, envs map[string]string, resolver CommitResolv
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
 
-	if err := m.initEnvData(envs, resolver); err != nil {
+	if err := m.initEnvData(envs, resolver, log); err != nil {
 		return nil, err
 	}
 	m.initTimestamp(now)
@@ -142,12 +146,12 @@ type buildkiteMetadata struct {
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
 }
 
-func (b *buildkiteMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (b *buildkiteMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(b, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := b.initCommitData(resolver, b.BuildkiteCommit); err != nil {
+	if err := b.initCommitData(resolver, b.BuildkiteCommit, log); err != nil {
 		return err
 	}
 
@@ -199,12 +203,12 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func (c *circleMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (c *circleMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(c, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := c.initCommitData(resolver, c.CircleSHA1); err != nil {
+	if err := c.initCommitData(resolver, c.CircleSHA1, log); err != nil {
 		return err
 	}
 
@@ -243,12 +247,12 @@ type githubMetadata struct {
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 }
 
-func (g *githubMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (g *githubMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := g.initCommitData(resolver, g.GithubSHA); err != nil {
+	if err := g.initCommitData(resolver, g.GithubSHA, log); err != nil {
 		return err
 	}
 
@@ -302,12 +306,12 @@ type jenkinsMetadata struct {
 	JenkinsWorkspace      string `env:"WORKSPACE" yaml:":jenkins_workspace"`
 }
 
-func (j *jenkinsMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (j *jenkinsMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := j.initCommitData(resolver, j.GitCommit); err != nil {
+	if err := j.initCommitData(resolver, j.GitCommit, log); err != nil {
 		return err
 	}
 
@@ -363,12 +367,12 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func (s *semaphoreMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (s *semaphoreMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(s, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := s.initCommitData(resolver, s.SemaphoreGitSHA); err != nil {
+	if err := s.initCommitData(resolver, s.SemaphoreGitSHA, log); err != nil {
 		return err
 	}
 
@@ -419,12 +423,12 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func (t *travisMetadata) initEnvData(envs map[string]string, resolver CommitResolver) error {
+func (t *travisMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
 	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := t.initCommitData(resolver, t.TravisCommit); err != nil {
+	if err := t.initCommitData(resolver, t.TravisCommit, log); err != nil {
 		return err
 	}
 

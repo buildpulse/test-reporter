@@ -176,7 +176,7 @@ func TestNewMetadata(t *testing.T) {
 				})
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now)
+			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -187,7 +187,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now)
+	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, &stubLogger{})
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -260,7 +260,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now)
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -315,7 +315,7 @@ func Test_buildkiteMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := buildkiteMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub())
+			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -359,7 +359,7 @@ func Test_circleMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := circleMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub())
+			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -400,7 +400,7 @@ func Test_githubMetadata_initEnvData_refTypes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := githubMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub())
+			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -449,7 +449,7 @@ func Test_travisMetadata_initEnvData_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := travisMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub())
+			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -492,3 +492,8 @@ func newCommitResolverStub() CommitResolver {
 			return &Commit{}, nil
 		})
 }
+
+// TODO: Look for better way to create a no-op logger for testing
+type stubLogger struct{}
+
+func (s *stubLogger) Printf(format string, v ...interface{}) {}
