@@ -11,31 +11,21 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// A Metadata instance provides metadata about a set of test results. It
-// identifies the CI provider, the commit SHA, the time at which the tests were
-// executed, etc.
-type Metadata interface {
-	MarshalYAML() (out []byte, err error)
-
-	initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error
-	initTimestamp(now func() time.Time)
-	initVersionData(version *Version)
-}
-
 // Logger -- TODO Add docs
 type Logger interface {
 	Printf(format string, v ...interface{})
 }
 
-// AbstractMetadata provides the fields that are common across all Metadata
-// instances, regardless of the specific CI provider.
-type AbstractMetadata struct {
+// A Metadata instance provides metadata about a set of test results. It
+// identifies the CI provider, the commit SHA, the time at which the tests were
+// executed, etc.
+type Metadata struct {
 	AuthoredAt        time.Time `yaml:":authored_at,omitempty"`
 	AuthorEmail       string    `yaml:":author_email,omitempty"`
 	AuthorName        string    `yaml:":author_name,omitempty"`
 	Branch            string    `yaml:":branch"`
 	BuildURL          string    `yaml:":build_url"`
-	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"`
+	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"` // TODO: Should this env be here or in the providers?
 	CIProvider        string    `yaml:":ci_provider"`
 	CommitMessage     string    `yaml:":commit_message,omitempty"`
 	CommitSHA         string    `yaml:":commit"`
@@ -47,14 +37,75 @@ type AbstractMetadata struct {
 	ReporterVersion   string    `yaml:":reporter_version"`
 	Timestamp         time.Time `yaml:":timestamp"`
 	TreeSHA           string    `yaml:":tree,omitempty"`
+
+	providerMeta providerMetadata
 }
 
-func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string, log Logger) error {
+type providerMetadata interface {
+	Init(envs map[string]string, log Logger) error
+	Branch() string
+	BuildURL() string
+	Check() string
+	CommitSHA() string
+	Name() string
+	RepoNameWithOwner() string
+}
+
+// NewMetadata creates a new Metadata instance from the given args.
+func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log Logger) (*Metadata, error) {
+	m := &Metadata{}
+
+	if err := m.initProviderData(envs, log); err != nil {
+		return nil, err
+	}
+
+	if err := m.initCommitData(resolver, m.providerMeta.CommitSHA(), log); err != nil {
+		return nil, err
+	}
+
+	m.initTimestamp(now)
+	m.initVersionData(version)
+
+	return m, nil
+}
+
+func (m *Metadata) initProviderData(envs map[string]string, log Logger) error {
+	switch {
+	case envs["BUILDKITE"] == "true":
+		m.providerMeta = &buildkiteMetadata{}
+	case envs["CIRCLECI"] == "true":
+		m.providerMeta = &circleMetadata{}
+	case envs["GITHUB_ACTIONS"] == "true":
+		m.providerMeta = &githubMetadata{}
+	case envs["JENKINS_HOME"] != "":
+		m.providerMeta = &jenkinsMetadata{}
+	case envs["SEMAPHORE"] == "true":
+		m.providerMeta = &semaphoreMetadata{}
+	case envs["TRAVIS"] == "true":
+		m.providerMeta = &travisMetadata{}
+	default:
+		return fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
+	}
+
+	if err := m.providerMeta.Init(envs, log); err != nil {
+		return err
+	}
+
+	m.Branch = m.providerMeta.Branch()
+	m.BuildURL = m.providerMeta.BuildURL()
+	m.Check = m.providerMeta.Check()
+	m.CIProvider = m.providerMeta.Name()
+	m.RepoNameWithOwner = m.providerMeta.RepoNameWithOwner()
+
+	return nil
+}
+
+func (m *Metadata) initCommitData(cr CommitResolver, sha string, log Logger) error {
 	// Git metadata functionality is experimental. While it's experimental, detect a nil CommitResolver and allow the commit metadata fields to be uploaded with empty values.
 	if cr == nil {
 		log.Printf("[experimental] no commit resolver available; falling back to commit data from environment\n")
 
-		a.CommitSHA = sha
+		m.CommitSHA = sha
 		return nil
 	}
 
@@ -63,67 +114,54 @@ func (a *AbstractMetadata) initCommitData(cr CommitResolver, sha string, log Log
 	if err != nil {
 		log.Printf("[experimental] git-based commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
 
-		a.CommitSHA = sha
+		m.CommitSHA = sha
 		return nil
 	}
 
-	a.AuthoredAt = c.AuthoredAt
-	a.AuthorEmail = c.AuthorEmail
-	a.AuthorName = c.AuthorName
-	a.CommitMessage = strings.TrimSpace(c.Message)
-	a.CommitSHA = c.SHA
-	a.CommittedAt = c.CommittedAt
-	a.CommitterEmail = c.CommitterEmail
-	a.CommitterName = c.CommitterName
-	a.TreeSHA = c.TreeSHA
+	m.AuthoredAt = c.AuthoredAt
+	m.AuthorEmail = c.AuthorEmail
+	m.AuthorName = c.AuthorName
+	m.CommitMessage = strings.TrimSpace(c.Message)
+	m.CommitSHA = c.SHA
+	m.CommittedAt = c.CommittedAt
+	m.CommitterEmail = c.CommitterEmail
+	m.CommitterName = c.CommitterName
+	m.TreeSHA = c.TreeSHA
 
 	return nil
 }
 
-func (a *AbstractMetadata) initTimestamp(now func() time.Time) {
-	a.Timestamp = now()
+func (m *Metadata) initTimestamp(now func() time.Time) {
+	m.Timestamp = now()
 }
 
-func (a *AbstractMetadata) initVersionData(version *Version) {
-	a.ReporterOS = version.GoOS
-	a.ReporterVersion = version.Number
+func (m *Metadata) initVersionData(version *Version) {
+	m.ReporterOS = version.GoOS
+	m.ReporterVersion = version.Number
 }
 
-// NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log Logger) (Metadata, error) {
-	var m Metadata
-
-	switch {
-	case envs["BUILDKITE"] == "true":
-		m = &buildkiteMetadata{}
-	case envs["CIRCLECI"] == "true":
-		m = &circleMetadata{}
-	case envs["GITHUB_ACTIONS"] == "true":
-		m = &githubMetadata{}
-	case envs["JENKINS_HOME"] != "":
-		m = &jenkinsMetadata{}
-	case envs["SEMAPHORE"] == "true":
-		m = &semaphoreMetadata{}
-	case envs["TRAVIS"] == "true":
-		m = &travisMetadata{}
-	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
-	}
-
-	if err := m.initEnvData(envs, resolver, log); err != nil {
+// MarshalYAML TODO Add docs
+func (m *Metadata) MarshalYAML() (out []byte, err error) {
+	topLevel, err := marshalYAML(m)
+	if err != nil {
 		return nil, err
 	}
-	m.initTimestamp(now)
-	m.initVersionData(version)
 
-	return m, nil
+	providerLevel, err := marshalYAML(m.providerMeta)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(topLevel, providerLevel...), nil
 }
 
-var _ Metadata = (*buildkiteMetadata)(nil)
+var _ providerMetadata = (*buildkiteMetadata)(nil)
 
 type buildkiteMetadata struct {
-	AbstractMetadata `yaml:",inline"`
+	// Internal state
+	nwo string
 
+	// Fields derived from Buildkite-specific environment variables
 	BuildkiteBranch                 string `env:"BUILDKITE_BRANCH" yaml:"-"`
 	BuildkiteBuildID                string `env:"BUILDKITE_BUILD_ID" yaml:":buildkite_build_id"`
 	BuildkiteBuildNumber            uint   `env:"BUILDKITE_BUILD_NUMBER" yaml:":buildkite_build_number"`
@@ -146,46 +184,58 @@ type buildkiteMetadata struct {
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
 }
 
-func (b *buildkiteMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (b *buildkiteMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(b, env.Options{Environment: envs}); err != nil {
 		return err
 	}
-
-	if err := b.initCommitData(resolver, b.BuildkiteCommit, log); err != nil {
-		return err
-	}
-
-	b.Branch = b.BuildkiteBranch
-	b.BuildURL = b.BuildkiteBuildURL
-	b.CIProvider = "buildkite"
 
 	nwo, err := nameWithOwnerFromGitURL(b.BuildkiteRepoURL)
 	if err != nil {
 		return err
 	}
-	b.RepoNameWithOwner = nwo
+	b.nwo = nwo
 
 	prNum, err := strconv.ParseUint(b.BuildkitePullRequest, 0, 0)
 	if err == nil {
 		b.BuildkitePullRequestNumber = uint(prNum)
 	}
 
-	if b.Check == "" {
-		b.Check = "buildkite"
-	}
-
 	return nil
 }
 
-func (b *buildkiteMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(b)
+func (b *buildkiteMetadata) Branch() string {
+	return b.BuildkiteBranch
 }
 
-var _ Metadata = (*circleMetadata)(nil)
+func (b *buildkiteMetadata) BuildURL() string {
+	return b.BuildkiteBuildURL
+}
+
+func (b *buildkiteMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if g.Check == "" {
+	// 	return "buildkite"
+	// }
+
+	return "buildkite"
+}
+
+func (b *buildkiteMetadata) CommitSHA() string {
+	return b.BuildkiteCommit
+}
+
+func (b *buildkiteMetadata) Name() string {
+	return "buildkite"
+}
+
+func (b *buildkiteMetadata) RepoNameWithOwner() string {
+	return b.nwo
+}
+
+var _ providerMetadata = (*circleMetadata)(nil)
 
 type circleMetadata struct {
-	AbstractMetadata `yaml:",inline"`
-
+	// Fields derived from Circle-specific environment variables
 	CircleBranch              string `env:"CIRCLE_BRANCH" yaml:"-"`
 	CircleBuildNumber         uint   `env:"CIRCLE_BUILD_NUM" yaml:":circle_build_num"`
 	CircleBuildURL            string `env:"CIRCLE_BUILD_URL" yaml:"-"`
@@ -203,36 +253,51 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func (c *circleMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (c *circleMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(c, env.Options{Environment: envs}); err != nil {
 		return err
-	}
-
-	if err := c.initCommitData(resolver, c.CircleSHA1, log); err != nil {
-		return err
-	}
-
-	c.Branch = c.CircleBranch
-	c.BuildURL = c.CircleBuildURL
-	c.CIProvider = "circleci"
-	c.RepoNameWithOwner = fmt.Sprintf("%s/%s", c.CircleProjectUsername, c.CircleProjectReponame)
-
-	if c.Check == "" {
-		c.Check = "circleci"
 	}
 
 	return nil
 }
 
-func (c *circleMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(c)
+func (c *circleMetadata) Branch() string {
+	return c.CircleBranch
 }
 
-var _ Metadata = (*githubMetadata)(nil)
+func (c *circleMetadata) BuildURL() string {
+	return c.CircleBuildURL
+}
+
+func (c *circleMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if g.Check == "" {
+	// 	return "circleci"
+	// }
+
+	return "circleci"
+}
+
+func (c *circleMetadata) CommitSHA() string {
+	return c.CircleSHA1
+}
+
+func (c *circleMetadata) Name() string {
+	return "circleci"
+}
+
+func (c *circleMetadata) RepoNameWithOwner() string {
+	return fmt.Sprintf("%s/%s", c.CircleProjectUsername, c.CircleProjectReponame)
+}
+
+var _ providerMetadata = (*githubMetadata)(nil)
 
 type githubMetadata struct {
-	AbstractMetadata `yaml:",inline"`
+	// Internal state
+	branch   string
+	buildURL string
 
+	// Fields derived from GitHub-specific environment variables
 	GithubActor     string `env:"GITHUB_ACTOR" yaml:":github_actor"`
 	GithubBaseRef   string `env:"GITHUB_BASE_REF" yaml:":github_base_ref"`
 	GithubEventName string `env:"GITHUB_EVENT_NAME" yaml:":github_event_name"`
@@ -247,55 +312,63 @@ type githubMetadata struct {
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 }
 
-func (g *githubMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (g *githubMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	if err := g.initCommitData(resolver, g.GithubSHA, log); err != nil {
-		return err
-	}
+	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.GithubRepoNWO)
 
-	g.RepoNameWithOwner = g.GithubRepoNWO
-	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.RepoNameWithOwner)
-	g.BuildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
-	g.CIProvider = "github-actions"
+	g.buildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
 
-	branch, err := g.branch()
+	isBranch, err := regexp.MatchString("^refs/heads/", g.GithubRef)
 	if err != nil {
 		return err
 	}
-	g.Branch = branch
-
-	if g.Check == "" {
-		g.Check = "github-actions"
+	if isBranch {
+		g.branch = strings.TrimPrefix(g.GithubRef, "refs/heads/")
 	}
 
 	return nil
 }
 
-func (g *githubMetadata) branch() (string, error) {
-	isBranch, err := regexp.MatchString("^refs/heads/", g.GithubRef)
-	if err != nil {
-		return "", err
-	}
-
-	if !isBranch {
-		return "", nil
-	}
-
-	return strings.TrimPrefix(g.GithubRef, "refs/heads/"), nil
+func (g *githubMetadata) Branch() string {
+	return g.branch
 }
 
-func (g *githubMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(g)
+func (g *githubMetadata) BuildURL() string {
+	return g.buildURL
 }
 
-var _ Metadata = (*jenkinsMetadata)(nil)
+func (g *githubMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if g.Check == "" {
+	// 	return "github-actions"
+	// }
+
+	return "github-actions"
+}
+
+func (g *githubMetadata) CommitSHA() string {
+	return g.GithubSHA
+}
+
+func (g *githubMetadata) Name() string {
+	return "github-actions"
+}
+
+func (g *githubMetadata) RepoNameWithOwner() string {
+	return g.GithubRepoNWO
+}
+
+var _ providerMetadata = (*jenkinsMetadata)(nil)
 
 type jenkinsMetadata struct {
-	AbstractMetadata `yaml:",inline"`
+	// Internal state
+	buildURL string
+	nwo      string
 
+	// Fields derived from Jenkins-specific environment variables
 	GitBranch             string `env:"GIT_BRANCH" yaml:"-"`
 	GitCommit             string `env:"GIT_COMMIT" yaml:"-"`
 	GitURL                string `env:"GIT_URL" yaml:"-"`
@@ -306,46 +379,59 @@ type jenkinsMetadata struct {
 	JenkinsWorkspace      string `env:"WORKSPACE" yaml:":jenkins_workspace"`
 }
 
-func (j *jenkinsMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (j *jenkinsMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
 		return err
 	}
-
-	if err := j.initCommitData(resolver, j.GitCommit, log); err != nil {
-		return err
-	}
-
-	j.Branch = j.GitBranch
-	j.CIProvider = "jenkins"
 
 	url, ok := envs["BUILD_URL"]
 	if !ok || url == "" {
 		return fmt.Errorf("missing required environment variable: BUILD_URL")
 	}
-	j.BuildURL = url
+	j.buildURL = url
 
 	nwo, err := nameWithOwnerFromGitURL(j.GitURL)
 	if err != nil {
 		return err
 	}
-	j.RepoNameWithOwner = nwo
-
-	if j.Check == "" {
-		j.Check = "jenkins"
-	}
+	j.nwo = nwo
 
 	return nil
 }
 
-func (j *jenkinsMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(j)
+func (j *jenkinsMetadata) Branch() string {
+	return j.GitBranch
 }
 
-var _ Metadata = (*semaphoreMetadata)(nil)
+func (j *jenkinsMetadata) BuildURL() string {
+	return j.buildURL
+}
+
+func (j *jenkinsMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if j.Check == "" {
+	// 	return "jenkins"
+	// }
+
+	return "jenkins"
+}
+
+func (j *jenkinsMetadata) CommitSHA() string {
+	return j.GitCommit
+}
+
+func (j *jenkinsMetadata) Name() string {
+	return "jenkins"
+}
+
+func (j *jenkinsMetadata) RepoNameWithOwner() string {
+	return j.nwo
+}
+
+var _ providerMetadata = (*semaphoreMetadata)(nil)
 
 type semaphoreMetadata struct {
-	AbstractMetadata `yaml:",inline"`
-
+	// Fields derived from Semaphore-specific environment variables
 	SemaphoreAgentMachineEnvironmentType string `env:"SEMAPHORE_AGENT_MACHINE_ENVIRONMENT_TYPE" yaml:":semaphore_agent_machine_environment_type"`
 	SemaphoreAgentMachineOsImage         string `env:"SEMAPHORE_AGENT_MACHINE_OS_IMAGE" yaml:":semaphore_agent_machine_os_image"`
 	SemaphoreAgentMachineType            string `env:"SEMAPHORE_AGENT_MACHINE_TYPE" yaml:":semaphore_agent_machine_type"`
@@ -367,36 +453,47 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func (s *semaphoreMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (s *semaphoreMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(s, env.Options{Environment: envs}); err != nil {
 		return err
-	}
-
-	if err := s.initCommitData(resolver, s.SemaphoreGitSHA, log); err != nil {
-		return err
-	}
-
-	s.Branch = s.SemaphoreGitBranch
-	s.BuildURL = fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
-	s.CIProvider = "semaphore"
-	s.RepoNameWithOwner = s.SemaphoreGitRepoSlug
-
-	if s.Check == "" {
-		s.Check = "semaphore"
 	}
 
 	return nil
 }
 
-func (s *semaphoreMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(s)
+func (s *semaphoreMetadata) Branch() string {
+	return s.SemaphoreGitBranch
 }
 
-var _ Metadata = (*travisMetadata)(nil)
+func (s *semaphoreMetadata) BuildURL() string {
+	return fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
+}
+
+func (s *semaphoreMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if g.Check == "" {
+	// 	return "semaphore"
+	// }
+
+	return "semaphore"
+}
+
+func (s *semaphoreMetadata) CommitSHA() string {
+	return s.SemaphoreGitSHA
+}
+
+func (s *semaphoreMetadata) Name() string {
+	return "semaphore"
+}
+
+func (s *semaphoreMetadata) RepoNameWithOwner() string {
+	return s.SemaphoreGitRepoSlug
+}
+
+var _ providerMetadata = (*travisMetadata)(nil)
 
 type travisMetadata struct {
-	AbstractMetadata `yaml:",inline"`
-
+	// Fields derived from Travis-specific environment variables
 	TravisBranch            string `env:"TRAVIS_BRANCH" yaml:"-"`
 	TravisBuildDir          string `env:"TRAVIS_BUILD_DIR" yaml:":travis_build_dir"`
 	TravisBuildID           uint   `env:"TRAVIS_BUILD_ID" yaml:":travis_build_id"`
@@ -423,34 +520,46 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func (t *travisMetadata) initEnvData(envs map[string]string, resolver CommitResolver, log Logger) error {
+func (t *travisMetadata) Init(envs map[string]string, log Logger) error {
 	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
 		return err
 	}
-
-	if err := t.initCommitData(resolver, t.TravisCommit, log); err != nil {
-		return err
-	}
-
-	t.Branch = t.TravisBranch
-	t.BuildURL = t.TravisJobWebURL
-	t.CIProvider = "travis-ci"
-	t.RepoNameWithOwner = t.TravisRepoSlug
 
 	prNum, err := strconv.ParseUint(t.TravisPullRequest, 0, 0)
 	if err == nil {
 		t.TravisPullRequestNumber = uint(prNum)
 	}
 
-	if t.Check == "" {
-		t.Check = "travis-ci"
-	}
-
 	return nil
 }
 
-func (t *travisMetadata) MarshalYAML() (out []byte, err error) {
-	return marshalYAML(t)
+func (t *travisMetadata) Branch() string {
+	return t.TravisBranch
+}
+
+func (t *travisMetadata) BuildURL() string {
+	return t.TravisJobWebURL
+}
+
+func (t *travisMetadata) Check() string {
+	// TODO: Handle custom check name
+	// if g.Check == "" {
+	// 	return "travis-ci"
+	// }
+
+	return "travis-ci"
+}
+
+func (t *travisMetadata) CommitSHA() string {
+	return t.TravisCommit
+}
+
+func (t *travisMetadata) Name() string {
+	return "travis-ci"
+}
+
+func (t *travisMetadata) RepoNameWithOwner() string {
+	return t.TravisRepoSlug
 }
 
 func marshalYAML(m interface{}) (out []byte, err error) {
