@@ -50,9 +50,6 @@ func newProviderMetadata(envs map[string]string, log Logger) (providerMetadata, 
 var _ providerMetadata = (*buildkiteMetadata)(nil)
 
 type buildkiteMetadata struct {
-	// Internal state
-	nwo string
-
 	// Fields derived from Buildkite-specific environment variables
 	BuildkiteBranch                 string `env:"BUILDKITE_BRANCH" yaml:"-"`
 	BuildkiteBuildID                string `env:"BUILDKITE_BUILD_ID" yaml:":buildkite_build_id"`
@@ -74,6 +71,8 @@ type buildkiteMetadata struct {
 	BuildkiteRepoURL                string `env:"BUILDKITE_REPO" yaml:"-"`
 	BuildkiteRetryCount             uint   `env:"BUILDKITE_RETRY_COUNT" yaml:":buildkite_retry_count"`
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
+
+	nwo string
 }
 
 func (b *buildkiteMetadata) Init(envs map[string]string, log Logger) error {
@@ -165,10 +164,6 @@ func (c *circleMetadata) RepoNameWithOwner() string {
 var _ providerMetadata = (*githubMetadata)(nil)
 
 type githubMetadata struct {
-	// Internal state
-	branch   string
-	buildURL string
-
 	// Fields derived from GitHub-specific environment variables
 	GithubActor     string `env:"GITHUB_ACTOR" yaml:":github_actor"`
 	GithubBaseRef   string `env:"GITHUB_BASE_REF" yaml:":github_base_ref"`
@@ -182,6 +177,9 @@ type githubMetadata struct {
 	GithubServerURL string `env:"GITHUB_SERVER_URL" yaml:"-"`
 	GithubSHA       string `env:"GITHUB_SHA" yaml:"-"`
 	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
+
+	branch   string
+	buildURL string
 }
 
 func (g *githubMetadata) Init(envs map[string]string, log Logger) error {
@@ -227,10 +225,6 @@ func (g *githubMetadata) RepoNameWithOwner() string {
 var _ providerMetadata = (*jenkinsMetadata)(nil)
 
 type jenkinsMetadata struct {
-	// Internal state
-	buildURL string
-	nwo      string
-
 	// Fields derived from Jenkins-specific environment variables
 	GitBranch             string `env:"GIT_BRANCH" yaml:"-"`
 	GitCommit             string `env:"GIT_COMMIT" yaml:"-"`
@@ -240,6 +234,9 @@ type jenkinsMetadata struct {
 	JenkinsJobURL         string `env:"JOB_URL" yaml:":jenkins_job_url"`
 	JenkinsNodeName       string `env:"NODE_NAME" yaml:":jenkins_node_name"`
 	JenkinsWorkspace      string `env:"WORKSPACE" yaml:":jenkins_workspace"`
+
+	buildURL string
+	nwo      string
 }
 
 func (j *jenkinsMetadata) Init(envs map[string]string, log Logger) error {
