@@ -108,24 +108,15 @@ func (m *Metadata) initVersionData(version *Version) {
 
 // MarshalYAML TODO Add docs
 func (m *Metadata) MarshalYAML() (out []byte, err error) {
-	topLevel, err := marshalYAML(m)
+	topLevel, err := yaml.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
 
-	providerLevel, err := marshalYAML(m.providerData)
+	providerLevel, err := yaml.Marshal(m.providerData)
 	if err != nil {
 		return nil, err
 	}
 
 	return append(topLevel, providerLevel...), nil
-}
-
-func marshalYAML(m interface{}) (out []byte, err error) {
-	data, err := yaml.Marshal(m)
-	if err != nil {
-		return nil, err
-	}
-
-	return data, nil
 }
