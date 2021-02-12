@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"io/ioutil"
 	"testing"
 	"time"
@@ -193,83 +194,47 @@ func TestNewMetadata_unsupportedProvider(t *testing.T) {
 	}
 }
 
-// func TestNewMetadata_customCheckName(t *testing.T) {
-// 	tests := []struct {
-// 		name             string
-// 		envs             map[string]string
-// 		expectedProvider string
-// 		expectedCheck    string
-// 	}{
-// 		{
-// 			name: "Buildkite",
-// 			envs: map[string]string{
-// 				"BUILDKITE":             "true",
-// 				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 				"BUILDKITE_REPO":        "git@github.com:x/y.git",
-// 			},
-// 			expectedProvider: "buildkite",
-// 			expectedCheck:    "some-custom-check-name",
-// 		},
-// {
-// 	name: "Circle",
-// 	envs: map[string]string{
-// 		"CIRCLECI":              "true",
-// 		"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 	},
-// 	expectedProvider: "circleci",
-// 	expectedCheck:    "some-custom-check-name",
-// },
-// {
-// 	name: "GitHubActions",
-// 	envs: map[string]string{
-// 		"GITHUB_ACTIONS":        "true",
-// 		"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 	},
-// 	expectedProvider: "github-actions",
-// 	expectedCheck:    "some-custom-check-name",
-// },
-// {
-// 	name: "Jenkins",
-// 	envs: map[string]string{
-// 		"JENKINS_HOME":          "/var/lib/jenkins",
-// 		"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 		"BUILD_URL":             "https://some-jenkins-server.com/job/some-project/8675309",
-// 		"GIT_URL":               "https://github.com/some-owner/some-repo.git",
-// 	},
-// 	expectedProvider: "jenkins",
-// 	expectedCheck:    "some-custom-check-name",
-// },
-// {
-// 	name: "Semaphore",
-// 	envs: map[string]string{
-// 		"SEMAPHORE":             "true",
-// 		"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 	},
-// 	expectedProvider: "semaphore",
-// 	expectedCheck:    "some-custom-check-name",
-// },
-// {
-// 	name: "Travis",
-// 	envs: map[string]string{
-// 		"TRAVIS":                "true",
-// 		"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-// 	},
-// 	expectedProvider: "travis-ci",
-// 	expectedCheck:    "some-custom-check-name",
-// },
-// 	}
-// 	for _, tt := range tests {
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, &stubLogger{})
-// 			assert.NoError(t, err)
+func TestNewMetadata_customCheckName(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedCheck string
+	}{
+		{
+			name: "with custom check name present",
+			envs: map[string]string{
+				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
+				"GITHUB_ACTIONS":        "true",
+			},
+			expectedCheck: "some-custom-check-name",
+		},
+		{
+			name: "with custom check name present but empty",
+			envs: map[string]string{
+				"BUILDPULSE_CHECK_NAME": "",
+				"GITHUB_ACTIONS":        "true",
+			},
+			expectedCheck: "github-actions",
+		},
+		{
+			name: "without custom check name",
+			envs: map[string]string{
+				"GITHUB_ACTIONS": "true",
+			},
+			expectedCheck: "github-actions",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, &stubLogger{})
+			assert.NoError(t, err)
 
-// 			yaml, err := meta.MarshalYAML()
-// 			assert.NoError(t, err)
-// 			assert.Regexp(t, fmt.Sprintf(":ci_provider: %s", tt.expectedProvider), string(yaml))
-// 			assert.Regexp(t, fmt.Sprintf(":check: %s", tt.expectedCheck), string(yaml))
-// 		})
-// 	}
-// }
+			yaml, err := meta.MarshalYAML()
+			assert.NoError(t, err)
+			assert.Regexp(t, fmt.Sprintf(":check: %s", tt.expectedCheck), string(yaml))
+		})
+	}
+}
 
 func Test_buildkiteMetadata_Init_extraFields(t *testing.T) {
 	tests := []struct {

@@ -15,7 +15,6 @@ type providerMetadata interface {
 	Init(envs map[string]string, log Logger) error
 	Branch() string
 	BuildURL() string
-	Check() string
 	CommitSHA() string
 	Name() string
 	RepoNameWithOwner() string
@@ -104,15 +103,6 @@ func (b *buildkiteMetadata) BuildURL() string {
 	return b.BuildkiteBuildURL
 }
 
-func (b *buildkiteMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if g.Check == "" {
-	// 	return "buildkite"
-	// }
-
-	return "buildkite"
-}
-
 func (b *buildkiteMetadata) CommitSHA() string {
 	return b.BuildkiteCommit
 }
@@ -158,15 +148,6 @@ func (c *circleMetadata) Branch() string {
 
 func (c *circleMetadata) BuildURL() string {
 	return c.CircleBuildURL
-}
-
-func (c *circleMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if g.Check == "" {
-	// 	return "circleci"
-	// }
-
-	return "circleci"
 }
 
 func (c *circleMetadata) CommitSHA() string {
@@ -231,15 +212,6 @@ func (g *githubMetadata) BuildURL() string {
 	return g.buildURL
 }
 
-func (g *githubMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if g.Check == "" {
-	// 	return "github-actions"
-	// }
-
-	return "github-actions"
-}
-
 func (g *githubMetadata) CommitSHA() string {
 	return g.GithubSHA
 }
@@ -298,15 +270,6 @@ func (j *jenkinsMetadata) BuildURL() string {
 	return j.buildURL
 }
 
-func (j *jenkinsMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if j.Check == "" {
-	// 	return "jenkins"
-	// }
-
-	return "jenkins"
-}
-
 func (j *jenkinsMetadata) CommitSHA() string {
 	return j.GitCommit
 }
@@ -358,15 +321,6 @@ func (s *semaphoreMetadata) Branch() string {
 
 func (s *semaphoreMetadata) BuildURL() string {
 	return fmt.Sprintf("%s/workflows/%s", s.SemaphoreOrganizationURL, s.SemaphoreWorkflowID)
-}
-
-func (s *semaphoreMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if g.Check == "" {
-	// 	return "semaphore"
-	// }
-
-	return "semaphore"
 }
 
 func (s *semaphoreMetadata) CommitSHA() string {
@@ -430,15 +384,6 @@ func (t *travisMetadata) Branch() string {
 
 func (t *travisMetadata) BuildURL() string {
 	return t.TravisJobWebURL
-}
-
-func (t *travisMetadata) Check() string {
-	// TODO: Handle custom check name
-	// if g.Check == "" {
-	// 	return "travis-ci"
-	// }
-
-	return "travis-ci"
 }
 
 func (t *travisMetadata) CommitSHA() string {

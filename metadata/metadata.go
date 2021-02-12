@@ -16,7 +16,7 @@ type Metadata struct {
 	AuthorName        string    `yaml:":author_name,omitempty"`
 	Branch            string    `yaml:":branch"`
 	BuildURL          string    `yaml:":build_url"`
-	Check             string    `yaml:":check" env:"BUILDPULSE_CHECK_NAME"` // TODO: Should this env be here or in the providers?
+	Check             string    `yaml:":check"`
 	CIProvider        string    `yaml:":ci_provider"`
 	CommitMessage     string    `yaml:":commit_message,omitempty"`
 	CommitSHA         string    `yaml:":commit"`
@@ -55,13 +55,19 @@ func (m *Metadata) initProviderData(envs map[string]string, log Logger) error {
 	if err != nil {
 		return err
 	}
-
 	m.providerData = pm
+
 	m.Branch = pm.Branch()
 	m.BuildURL = pm.BuildURL()
-	m.Check = pm.Check()
 	m.CIProvider = pm.Name()
 	m.RepoNameWithOwner = pm.RepoNameWithOwner()
+
+	check, ok := envs["BUILDPULSE_CHECK_NAME"]
+	if ok && check != "" {
+		m.Check = check
+	} else {
+		m.Check = pm.Name()
+	}
 
 	return nil
 }
