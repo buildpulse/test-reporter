@@ -29,7 +29,7 @@ type Metadata struct {
 	Timestamp         time.Time `yaml:":timestamp"`
 	TreeSHA           string    `yaml:":tree,omitempty"`
 
-	providerMeta providerMetadata
+	providerData providerMetadata
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
@@ -40,7 +40,7 @@ func NewMetadata(version *Version, envs map[string]string, resolver CommitResolv
 		return nil, err
 	}
 
-	if err := m.initCommitData(resolver, m.providerMeta.CommitSHA(), log); err != nil {
+	if err := m.initCommitData(resolver, m.providerData.CommitSHA(), log); err != nil {
 		return nil, err
 	}
 
@@ -56,7 +56,7 @@ func (m *Metadata) initProviderData(envs map[string]string, log Logger) error {
 		return err
 	}
 
-	m.providerMeta = pm
+	m.providerData = pm
 	m.Branch = pm.Branch()
 	m.BuildURL = pm.BuildURL()
 	m.Check = pm.Check()
@@ -113,7 +113,7 @@ func (m *Metadata) MarshalYAML() (out []byte, err error) {
 		return nil, err
 	}
 
-	providerLevel, err := marshalYAML(m.providerMeta)
+	providerLevel, err := marshalYAML(m.providerData)
 	if err != nil {
 		return nil, err
 	}
