@@ -176,7 +176,7 @@ func TestNewMetadata(t *testing.T) {
 				})
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, &stubLogger{})
+			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -187,7 +187,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, &stubLogger{})
+	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, newLoggerStub())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -195,293 +195,42 @@ func TestNewMetadata_unsupportedProvider(t *testing.T) {
 
 func TestNewMetadata_customCheckName(t *testing.T) {
 	tests := []struct {
-		name             string
-		envs             map[string]string
-		expectedProvider string
-		expectedCheck    string
+		name          string
+		envs          map[string]string
+		expectedCheck string
 	}{
 		{
-			name: "Buildkite",
+			name: "with custom check name present",
 			envs: map[string]string{
-				"BUILDKITE":             "true",
 				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-				"BUILDKITE_REPO":        "git@github.com:x/y.git",
-			},
-			expectedProvider: "buildkite",
-			expectedCheck:    "some-custom-check-name",
-		},
-		{
-			name: "Circle",
-			envs: map[string]string{
-				"CIRCLECI":              "true",
-				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-			},
-			expectedProvider: "circleci",
-			expectedCheck:    "some-custom-check-name",
-		},
-		{
-			name: "GitHubActions",
-			envs: map[string]string{
 				"GITHUB_ACTIONS":        "true",
-				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
 			},
-			expectedProvider: "github-actions",
-			expectedCheck:    "some-custom-check-name",
+			expectedCheck: "some-custom-check-name",
 		},
 		{
-			name: "Jenkins",
+			name: "with custom check name present but empty",
 			envs: map[string]string{
-				"JENKINS_HOME":          "/var/lib/jenkins",
-				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-				"BUILD_URL":             "https://some-jenkins-server.com/job/some-project/8675309",
-				"GIT_URL":               "https://github.com/some-owner/some-repo.git",
+				"BUILDPULSE_CHECK_NAME": "",
+				"GITHUB_ACTIONS":        "true",
 			},
-			expectedProvider: "jenkins",
-			expectedCheck:    "some-custom-check-name",
+			expectedCheck: "github-actions",
 		},
 		{
-			name: "Semaphore",
+			name: "without custom check name",
 			envs: map[string]string{
-				"SEMAPHORE":             "true",
-				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
+				"GITHUB_ACTIONS": "true",
 			},
-			expectedProvider: "semaphore",
-			expectedCheck:    "some-custom-check-name",
-		},
-		{
-			name: "Travis",
-			envs: map[string]string{
-				"TRAVIS":                "true",
-				"BUILDPULSE_CHECK_NAME": "some-custom-check-name",
-			},
-			expectedProvider: "travis-ci",
-			expectedCheck:    "some-custom-check-name",
+			expectedCheck: "github-actions",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, &stubLogger{})
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
 			assert.NoError(t, err)
-			assert.Regexp(t, fmt.Sprintf(":ci_provider: %s", tt.expectedProvider), string(yaml))
 			assert.Regexp(t, fmt.Sprintf(":check: %s", tt.expectedCheck), string(yaml))
-		})
-	}
-}
-
-func Test_buildkiteMetadata_initEnvData_extraFields(t *testing.T) {
-	tests := []struct {
-		name          string
-		envs          map[string]string
-		expectedLines []string
-	}{
-		{
-			name: "when rebuilt",
-			envs: map[string]string{
-				"BUILDKITE_REBUILT_FROM_BUILD_ID":     "00000000-0000-0000-0000-000000000000",
-				"BUILDKITE_REBUILT_FROM_BUILD_NUMBER": "42",
-				"BUILDKITE_REPO":                      "git@github.com:x/y.git",
-			},
-			expectedLines: []string{
-				":buildkite_rebuilt_from_build_id: 00000000-0000-0000-0000-000000000000",
-				":buildkite_rebuilt_from_build_number: 42",
-			},
-		},
-		{
-			name: "with pull request",
-			envs: map[string]string{
-				"BUILDKITE_PULL_REQUEST_BASE_BRANCH": "some-base-branch",
-				"BUILDKITE_PULL_REQUEST_REPO":        "git://github.com/some-forker/some-repo.git",
-				"BUILDKITE_PULL_REQUEST":             "99",
-				"BUILDKITE_REPO":                     "git@github.com:x/y.git",
-			},
-			expectedLines: []string{
-				":buildkite_pull_request_base_branch: some-base-branch",
-				":buildkite_pull_request_repo: git://github.com/some-forker/some-repo.git",
-				":buildkite_pull_request_number: 99",
-			},
-		},
-		{
-			name: "with tag",
-			envs: map[string]string{
-				"BUILDKITE_REPO": "git@github.com:x/y.git",
-				"BUILDKITE_TAG":  "v0.1.0",
-			},
-			expectedLines: []string{":buildkite_tag: v0.1.0"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			meta := buildkiteMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
-			assert.NoError(t, err)
-
-			yaml, err := meta.MarshalYAML()
-			assert.NoError(t, err)
-			for _, line := range tt.expectedLines {
-				assert.Regexp(t, line, string(yaml))
-			}
-		})
-	}
-}
-
-func Test_circleMetadata_initEnvData_extraFields(t *testing.T) {
-	tests := []struct {
-		name          string
-		envs          map[string]string
-		expectedLines []string
-	}{
-		{
-			name: "with pull request",
-			envs: map[string]string{
-				"CIRCLE_PR_NUMBER":    "42",
-				"CIRCLE_PR_REPONAME":  "some-repo",
-				"CIRCLE_PR_USERNAME":  "some-forker",
-				"CIRCLE_PULL_REQUEST": "https://github.com/some-owner/some-repo/pull/42",
-			},
-			expectedLines: []string{
-				":circle_pr_number: 42",
-				":circle_pr_reponame: some-repo",
-				":circle_pr_username: some-forker",
-				":circle_pull_request: https://github.com/some-owner/some-repo/pull/42",
-			},
-		},
-		{
-			name: "with tag",
-			envs: map[string]string{
-				"CIRCLE_TAG": "v0.1.0",
-			},
-			expectedLines: []string{":circle_tag: v0.1.0"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			meta := circleMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
-			assert.NoError(t, err)
-
-			yaml, err := meta.MarshalYAML()
-			assert.NoError(t, err)
-			for _, line := range tt.expectedLines {
-				assert.Regexp(t, line, string(yaml))
-			}
-		})
-	}
-}
-
-func Test_githubMetadata_initEnvData_refTypes(t *testing.T) {
-	tests := []struct {
-		name string
-		envs map[string]string
-		yaml string
-	}{
-		{
-			name: "branch",
-			envs: map[string]string{
-				"GITHUB_REF": "refs/heads/some-branch",
-			},
-			yaml: ":branch: some-branch",
-		},
-		{
-			name: "tag",
-			envs: map[string]string{
-				"GITHUB_REF": "refs/tags/v0.1.0",
-			},
-			yaml: ":branch: \"\"\n",
-		},
-		{
-			name: "neither a branch nor a tag",
-			envs: map[string]string{}, // The GITHUB_REF env var is not present in this scenario
-			yaml: ":branch: \"\"\n",
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			meta := githubMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
-			assert.NoError(t, err)
-
-			yaml, err := meta.MarshalYAML()
-			assert.NoError(t, err)
-			assert.Contains(t, string(yaml), tt.yaml)
-		})
-	}
-}
-
-func Test_travisMetadata_initEnvData_extraFields(t *testing.T) {
-	tests := []struct {
-		name          string
-		envs          map[string]string
-		expectedLines []string
-	}{
-		{
-			name: "with job name",
-			envs: map[string]string{
-				"TRAVIS_JOB_NAME": "some-job-name",
-			},
-			expectedLines: []string{":travis_job_name: some-job-name"},
-		},
-		{
-			name: "with pull request",
-			envs: map[string]string{
-				"TRAVIS_PULL_REQUEST_BRANCH": "some-branch",
-				"TRAVIS_PULL_REQUEST_SHA":    "eea22cb17a834f39961499af910ec96c82b035f4",
-				"TRAVIS_PULL_REQUEST_SLUG":   "some-forker/some-repo",
-				"TRAVIS_PULL_REQUEST":        "1",
-			},
-			expectedLines: []string{
-				":travis_pull_request_branch: some-branch",
-				":travis_pull_request_sha: eea22cb17a834f39961499af910ec96c82b035f4",
-				":travis_pull_request_slug: some-forker/some-repo",
-				":travis_pull_request_number: 1",
-			},
-		},
-		{
-			name: "with tag",
-			envs: map[string]string{
-				"TRAVIS_TAG": "v0.1.0",
-			},
-			expectedLines: []string{":travis_tag: v0.1.0"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			meta := travisMetadata{}
-			err := meta.initEnvData(tt.envs, newCommitResolverStub(), &stubLogger{})
-			assert.NoError(t, err)
-
-			yaml, err := meta.MarshalYAML()
-			assert.NoError(t, err)
-			for _, line := range tt.expectedLines {
-				assert.Regexp(t, line, string(yaml))
-			}
-		})
-	}
-}
-
-func Test_nameWithOwnerFromGitURL(t *testing.T) {
-	tests := []struct {
-		name string
-		url  string
-		nwo  string
-		err  bool
-	}{
-		{name: "https", url: "https://github.com/some-owner/some-repo.git", nwo: "some-owner/some-repo", err: false},
-		{name: "ssh", url: "git@github.com:some-owner/some-repo.git", nwo: "some-owner/some-repo", err: false},
-		{name: "malformed", url: "some-malformed-url", nwo: "", err: true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			nwo, err := nameWithOwnerFromGitURL(tt.url)
-
-			if tt.err {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
-				assert.Equal(t, nwo, tt.nwo)
-			}
 		})
 	}
 }
@@ -493,7 +242,10 @@ func newCommitResolverStub() CommitResolver {
 		})
 }
 
-// TODO: Look for better way to create a no-op logger for testing
-type stubLogger struct{}
+type loggerStub struct{}
 
-func (s *stubLogger) Printf(format string, v ...interface{}) {}
+func (l *loggerStub) Printf(format string, v ...interface{}) {}
+
+func newLoggerStub() Logger {
+	return &loggerStub{}
+}
