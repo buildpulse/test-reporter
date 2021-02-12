@@ -176,7 +176,7 @@ func TestNewMetadata(t *testing.T) {
 				})
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, &stubLogger{})
+			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -187,7 +187,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, &stubLogger{})
+	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, newLoggerStub())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -225,7 +225,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, &stubLogger{})
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -242,7 +242,10 @@ func newCommitResolverStub() CommitResolver {
 		})
 }
 
-// TODO: Look for better way to create a no-op logger for testing
-type stubLogger struct{}
+type loggerStub struct{}
 
-func (s *stubLogger) Printf(format string, v ...interface{}) {}
+func (l *loggerStub) Printf(format string, v ...interface{}) {}
+
+func newLoggerStub() Logger {
+	return &loggerStub{}
+}

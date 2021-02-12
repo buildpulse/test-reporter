@@ -51,7 +51,7 @@ func Test_buildkiteMetadata_Init_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := buildkiteMetadata{}
-			err := meta.Init(tt.envs, &stubLogger{})
+			err := meta.Init(tt.envs, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := yaml.Marshal(meta)
@@ -95,7 +95,7 @@ func Test_circleMetadata_Init_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := circleMetadata{}
-			err := meta.Init(tt.envs, &stubLogger{})
+			err := meta.Init(tt.envs, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := yaml.Marshal(meta)
@@ -136,7 +136,7 @@ func Test_githubMetadata_Init_refTypes(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := githubMetadata{}
-			err := meta.Init(tt.envs, &stubLogger{})
+			err := meta.Init(tt.envs, newLoggerStub())
 			assert.NoError(t, err)
 
 			assert.Equal(t, tt.want, meta.Branch())
@@ -183,7 +183,7 @@ func Test_travisMetadata_Init_extraFields(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			meta := travisMetadata{}
-			err := meta.Init(tt.envs, &stubLogger{})
+			err := meta.Init(tt.envs, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := yaml.Marshal(meta)
