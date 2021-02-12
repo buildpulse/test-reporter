@@ -28,6 +28,8 @@ type credentials struct {
 	SecretAccessKey string
 }
 
+// A log object can be passed around for use as a logger. It stores logs
+// in-memory and can flush the logs to a string when requested.
 type log struct {
 	entries []string
 }
@@ -37,6 +39,7 @@ func (l *log) Printf(format string, v ...interface{}) {
 	fmt.Printf(format, v...)
 }
 
+// Text returns a string concatenation of all of the log's entries.
 func (l *log) Text() string {
 	return strings.Join(l.entries, "\n")
 }

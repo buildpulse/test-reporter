@@ -9,7 +9,8 @@ import (
 	"github.com/caarlos0/env/v6"
 )
 
-// TODO Doc?
+// A providerMetadata instance supplies the metadata for a build taking place on
+// a specific CI provider (e.g., CircleCI, GitHub Actions, etc.).
 type providerMetadata interface {
 	Init(envs map[string]string, log Logger) error
 	Branch() string

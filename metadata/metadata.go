@@ -106,7 +106,7 @@ func (m *Metadata) initVersionData(version *Version) {
 	m.ReporterVersion = version.Number
 }
 
-// MarshalYAML TODO Add docs
+// MarshalYAML serializes the metadata into a YAML document.
 func (m *Metadata) MarshalYAML() (out []byte, err error) {
 	universalFields, err := yaml.Marshal(m)
 	if err != nil {
