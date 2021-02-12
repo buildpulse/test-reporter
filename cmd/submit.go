@@ -36,7 +36,6 @@ type log struct {
 
 func (l *log) Printf(format string, v ...interface{}) {
 	l.entries = append(l.entries, fmt.Sprintf(format, v...))
-	fmt.Printf(format, v...)
 }
 
 // Text returns a string concatenation of all of the log's entries.
