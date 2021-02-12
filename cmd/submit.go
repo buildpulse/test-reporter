@@ -29,7 +29,7 @@ type credentials struct {
 }
 
 // A log object can be passed around for use as a logger. It stores logs
-// in-memory and can flush the logs to a string when requested.
+// in memory and can flush the logs to a string when requested.
 type log struct {
 	entries []string
 }
