@@ -55,7 +55,7 @@ func main() {
 
 	switch {
 	case *help || os.Args[1] == "help":
-		fmt.Println(usage)
+		flag.Usage()
 	case *version || os.Args[1] == "version":
 		fmt.Printf(getVersion().String())
 	case os.Args[1] == "submit" && len(os.Args) > 2:
