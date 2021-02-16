@@ -43,6 +43,33 @@ func (l *log) Text() string {
 	return strings.Join(l.entries, "\n")
 }
 
+// A CommitResolverFactory provides methods for creating a
+// metadata.CommitResolver.
+type CommitResolverFactory interface {
+	NewFromRepository(path string) (metadata.CommitResolver, error)
+	NewFromStaticValue(commit *metadata.Commit) metadata.CommitResolver
+}
+
+type defaultCommitResolverFactory struct{}
+
+// NewCommitResolverFactory returns a CommitResolverFactory that creates
+// CommitResolvers with the default production implementations.
+func NewCommitResolverFactory() CommitResolverFactory {
+	return &defaultCommitResolverFactory{}
+}
+
+// NewFromRepository returns a CommitResolver for looking up commits in the
+// repository located at path.
+func (d *defaultCommitResolverFactory) NewFromRepository(path string) (metadata.CommitResolver, error) {
+	return metadata.NewRepositoryCommitResolver(path)
+}
+
+// NewFromStaticValue returns a CommitResolver whose Lookup method always
+// produces a Commit with values matching the fields in commit.
+func (d *defaultCommitResolverFactory) NewFromStaticValue(commit *metadata.Commit) metadata.CommitResolver {
+	return metadata.NewStaticCommitResolver(commit)
+}
+
 // Submit represents the task of preparing and sending a set of test results to
 // BuildPulse.
 type Submit struct {
@@ -57,6 +84,7 @@ type Submit struct {
 	accountID      uint64
 	repositoryID   uint64
 	repositoryPath string
+	tree           string
 	credentials    credentials
 	commitResolver metadata.CommitResolver
 }
@@ -74,6 +102,7 @@ func NewSubmit(version *metadata.Version) *Submit {
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
+	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
 	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
 
 	return s
@@ -81,7 +110,7 @@ func NewSubmit(version *metadata.Version) *Submit {
 
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
-func (s *Submit) Init(args []string, envs map[string]string) error {
+func (s *Submit) Init(args []string, envs map[string]string, commitResolverFactory CommitResolverFactory) error {
 	s.diagnostics.Printf("args: %+v", args)
 
 	dir, err := os.Getwd()
@@ -106,9 +135,14 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	if err := s.fs.Parse(args[1:]); err != nil {
 		return err
 	}
+
+	flagset := make(map[string]bool)
+	s.fs.Visit(func(f *flag.Flag) { flagset[f.Name] = true })
+
 	if s.accountID == 0 {
 		return fmt.Errorf("missing required flag: -account-id")
 	}
+
 	if s.repositoryID == 0 {
 		return fmt.Errorf("missing required flag: -repository-id")
 	}
@@ -125,16 +159,34 @@ func (s *Submit) Init(args []string, envs map[string]string) error {
 	}
 	s.credentials.SecretAccessKey = key
 
+	if flagset["repository-dir"] && flagset["tree"] {
+		return fmt.Errorf("invalid use of flag -repository-dir with flag -tree: use one or the other, but not both")
+	}
+
+	re := regexp.MustCompile(`^[0-9a-f]{40}$`)
+	if flagset["tree"] && !re.MatchString(s.tree) {
+		return fmt.Errorf("invalid value \"%s\" for flag -tree: should be a 40-character SHA-1 hash", s.tree)
+	}
+
 	info, err = os.Stat(s.repositoryPath)
 	if err != nil || !info.IsDir() {
 		return fmt.Errorf("[experimental] invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
 	}
-	s.commitResolver, err = metadata.NewCommitResolver(s.repositoryPath)
-	if err != nil {
-		// Git metadata functionality is experimental. While it's experimental, don't let an invalid repository prevent the test-reporter from continuing normal operation.
-		warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
-		s.diagnostics.Printf("warning: %v", warning)
-		fmt.Fprintf(os.Stderr, warning)
+
+	if flagset["tree"] {
+		s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{TreeSHA: s.tree})
+	} else {
+		s.commitResolver, err = commitResolverFactory.NewFromRepository(s.repositoryPath)
+		if err != nil {
+			// Git metadata functionality is experimental. While it's experimental,
+			// don't let an invalid repository prevent the test-reporter from
+			// continuing normal operation. Instead, print a warning message and use a
+			// CommitResolver that returns an empty Commit.
+			warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
+			s.diagnostics.Printf("warning: %v", warning)
+			fmt.Fprintf(os.Stderr, warning)
+			s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
+		}
 	}
 
 	s.envs = envs

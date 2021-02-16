@@ -24,25 +24,16 @@ type Commit struct {
 // A CommitResolver provides the ability to look up a commit.
 type CommitResolver interface {
 	Lookup(sha string) (*Commit, error)
+	Source() string
 }
 
-// The CommitResolverFunc type is an adapter to allow the use of ordinary
-// functions as commit resolvers. If f is a function with the appropriate
-// signature, CommitResolverFunc(f) is a CommitResolver that calls f.
-type CommitResolverFunc func(sha string) (*Commit, error)
-
-// Lookup calls f(sha).
-func (f CommitResolverFunc) Lookup(sha string) (*Commit, error) {
-	return f(sha)
+type repositoryCommitResolver struct {
+	repo *git.Repository
 }
 
-// NewCommitResolver returns a CommitResolver for looking up commits in the
-// repository located at path.
-//
-// Future CommitResolver variants could potentially include the ability to
-// lookup a commit based on environment variables or args passed to the
-// test-reporter CLI.
-func NewCommitResolver(path string) (CommitResolver, error) {
+// NewRepositoryCommitResolver returns a CommitResolver for looking up commits
+// in the repository located at path.
+func NewRepositoryCommitResolver(path string) (CommitResolver, error) {
 	repo, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		if err == git.ErrRepositoryNotExists {
@@ -53,10 +44,6 @@ func NewCommitResolver(path string) (CommitResolver, error) {
 	}
 
 	return &repositoryCommitResolver{repo: repo}, nil
-}
-
-type repositoryCommitResolver struct {
-	repo *git.Repository
 }
 
 func (r *repositoryCommitResolver) Lookup(sha string) (*Commit, error) {
@@ -76,4 +63,36 @@ func (r *repositoryCommitResolver) Lookup(sha string) (*Commit, error) {
 		SHA:            c.Hash.String(),
 		TreeSHA:        c.TreeHash.String(),
 	}, nil
+}
+
+func (r *repositoryCommitResolver) Source() string {
+	return "Repository"
+}
+
+type staticCommitResolver struct {
+	commit *Commit
+}
+
+// NewStaticCommitResolver returns a CommitResolver whose Lookup method always
+// produces a Commit with values matching the fields in c.
+func NewStaticCommitResolver(c *Commit) CommitResolver {
+	return &staticCommitResolver{commit: c}
+}
+
+func (s *staticCommitResolver) Lookup(sha string) (*Commit, error) {
+	return &Commit{
+		SHA:            sha,
+		AuthoredAt:     s.commit.AuthoredAt,
+		AuthorEmail:    s.commit.AuthorEmail,
+		AuthorName:     s.commit.AuthorName,
+		CommittedAt:    s.commit.CommittedAt,
+		CommitterEmail: s.commit.CommitterEmail,
+		CommitterName:  s.commit.CommitterName,
+		Message:        s.commit.Message,
+		TreeSHA:        s.commit.TreeSHA,
+	}, nil
+}
+
+func (s *staticCommitResolver) Source() string {
+	return "Static"
 }

@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewCommitResolver_invalidRepo(t *testing.T) {
-	_, err := NewCommitResolver(t.TempDir())
+func TestNewRepositoryCommitResolver_invalidRepo(t *testing.T) {
+	_, err := NewRepositoryCommitResolver(t.TempDir())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "no repository found")
 	}
@@ -22,7 +22,7 @@ func Test_repositoryCommitResolver_Lookup(t *testing.T) {
 	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
-	r, err := NewCommitResolver(dir)
+	r, err := NewRepositoryCommitResolver(dir)
 	require.NoError(t, err)
 
 	c, err := r.Lookup("5974e4edce87279f60adaf55c2adcee8847b2612")
@@ -44,7 +44,7 @@ func Test_repositoryCommitResolver_Lookup_notFound(t *testing.T) {
 	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
-	r, err := NewCommitResolver(dir)
+	r, err := NewRepositoryCommitResolver(dir)
 	require.NoError(t, err)
 
 	_, err = r.Lookup("0000000000000000000000000000000000000000")

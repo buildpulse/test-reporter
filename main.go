@@ -27,6 +27,7 @@ FLAGS
   --account-id      (required) BuildPulse account ID for the account that owns the repository
   --repository-id   (required) BuildPulse repository ID for the repository that produced the test results
   --repository-dir  Path to local git clone of the repository (default: ".")
+  --tree            SHA-1 hash of the git tree that produced the test results (for use only if a local git clone does not exist)
 
 ENVIRONMENT VARIABLES
 	Set the following environment variables:
@@ -61,7 +62,7 @@ func main() {
 	case os.Args[1] == "submit" && len(os.Args) > 2:
 		c := cmd.NewSubmit(getVersion())
 		envs := toMap(os.Environ())
-		if err := c.Init(os.Args[2:], envs); err != nil {
+		if err := c.Init(os.Args[2:], envs, cmd.NewCommitResolverFactory()); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
 			os.Exit(1)
 		}

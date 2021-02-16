@@ -160,23 +160,21 @@ func TestNewMetadata(t *testing.T) {
 			committedAt, err := time.Parse(time.RFC3339, "2020-07-10T07:08:09+13:00")
 			require.NoError(t, err)
 
-			commitResolverDouble := CommitResolverFunc(
-				func(sha string) (*Commit, error) {
-					return &Commit{
-						AuthoredAt:     authoredAt,
-						AuthorEmail:    "some-author@example.com",
-						AuthorName:     "Some Author",
-						CommittedAt:    committedAt,
-						CommitterEmail: "some-committer@example.com",
-						CommitterName:  "Some Committer",
-						Message:        "Some message",
-						SHA:            sha,
-						TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
-					}, nil
-				})
+			commitResolver := NewStaticCommitResolver(
+				&Commit{
+					AuthoredAt:     authoredAt,
+					AuthorEmail:    "some-author@example.com",
+					AuthorName:     "Some Author",
+					CommittedAt:    committedAt,
+					CommitterEmail: "some-committer@example.com",
+					CommitterName:  "Some Committer",
+					Message:        "Some message",
+					TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
+				},
+			)
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, commitResolverDouble, now, newLoggerStub())
+			meta, err := NewMetadata(version, tt.envs, commitResolver, now, newLoggerStub())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -236,10 +234,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 }
 
 func newCommitResolverStub() CommitResolver {
-	return CommitResolverFunc(
-		func(sha string) (*Commit, error) {
-			return &Commit{}, nil
-		})
+	return NewStaticCommitResolver(&Commit{})
 }
 
 type loggerStub struct{}

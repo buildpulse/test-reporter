@@ -11,23 +11,24 @@ import (
 // identifies the CI provider, the commit SHA, the time at which the tests were
 // executed, etc.
 type Metadata struct {
-	AuthoredAt        time.Time `yaml:":authored_at,omitempty"`
-	AuthorEmail       string    `yaml:":author_email,omitempty"`
-	AuthorName        string    `yaml:":author_name,omitempty"`
-	Branch            string    `yaml:":branch"`
-	BuildURL          string    `yaml:":build_url"`
-	Check             string    `yaml:":check"`
-	CIProvider        string    `yaml:":ci_provider"`
-	CommitMessage     string    `yaml:":commit_message,omitempty"`
-	CommitSHA         string    `yaml:":commit"`
-	CommittedAt       time.Time `yaml:":committed_at,omitempty"`
-	CommitterEmail    string    `yaml:":committer_email,omitempty"`
-	CommitterName     string    `yaml:":committer_name,omitempty"`
-	RepoNameWithOwner string    `yaml:":repo_name_with_owner"`
-	ReporterOS        string    `yaml:":reporter_os"`
-	ReporterVersion   string    `yaml:":reporter_version"`
-	Timestamp         time.Time `yaml:":timestamp"`
-	TreeSHA           string    `yaml:":tree,omitempty"`
+	AuthoredAt           time.Time `yaml:":authored_at,omitempty"`
+	AuthorEmail          string    `yaml:":author_email,omitempty"`
+	AuthorName           string    `yaml:":author_name,omitempty"`
+	Branch               string    `yaml:":branch"`
+	BuildURL             string    `yaml:":build_url"`
+	Check                string    `yaml:":check"`
+	CIProvider           string    `yaml:":ci_provider"`
+	CommitMessage        string    `yaml:":commit_message,omitempty"`
+	CommitMetadataSource string    `yaml:":commit_metadata_source"`
+	CommitSHA            string    `yaml:":commit"`
+	CommittedAt          time.Time `yaml:":committed_at,omitempty"`
+	CommitterEmail       string    `yaml:":committer_email,omitempty"`
+	CommitterName        string    `yaml:":committer_name,omitempty"`
+	RepoNameWithOwner    string    `yaml:":repo_name_with_owner"`
+	ReporterOS           string    `yaml:":reporter_os"`
+	ReporterVersion      string    `yaml:":reporter_version"`
+	Timestamp            time.Time `yaml:":timestamp"`
+	TreeSHA              string    `yaml:":tree,omitempty"`
 
 	providerData providerMetadata
 }
@@ -73,18 +74,12 @@ func (m *Metadata) initProviderData(envs map[string]string, log Logger) error {
 }
 
 func (m *Metadata) initCommitData(cr CommitResolver, sha string, log Logger) error {
-	// Git metadata functionality is experimental. While it's experimental, detect a nil CommitResolver and allow the commit metadata fields to be uploaded with empty values.
-	if cr == nil {
-		log.Printf("[experimental] no commit resolver available; falling back to commit data from environment\n")
-
-		m.CommitSHA = sha
-		return nil
-	}
+	m.CommitMetadataSource = cr.Source()
 
 	// Git metadata functionality is experimental. While it's experimental, don't let this error prevent the test-reporter from continuing normal operation. Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
-		log.Printf("[experimental] git-based commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
+		log.Printf("[experimental] commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
 
 		m.CommitSHA = sha
 		return nil
