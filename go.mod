@@ -1,4 +1,4 @@
-module github.com/buildpulse/cli
+module github.com/buildpulse/test-reporter
 
 go 1.15
 
