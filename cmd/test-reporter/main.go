@@ -58,7 +58,7 @@ func main() {
 	case *help || os.Args[1] == "help":
 		flag.Usage()
 	case *version || os.Args[1] == "version":
-		fmt.Printf(getVersion().String())
+		fmt.Print(getVersion().String())
 	case os.Args[1] == "submit" && len(os.Args) > 2:
 		c := submit.NewSubmit(getVersion())
 		envs := toMap(os.Environ())
