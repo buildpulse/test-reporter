@@ -1,4 +1,4 @@
-package cmd
+package submit
 
 import (
 	"archive/tar"
