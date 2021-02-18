@@ -217,6 +217,9 @@ func (s *Submit) Run() (string, error) {
 	}
 
 	path, err := toTarGz(s.path)
+	if err != nil {
+		return "", err
+	}
 
 	return s.upload(path)
 }
