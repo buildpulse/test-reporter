@@ -7,8 +7,8 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/buildpulse/cli/cmd"
-	"github.com/buildpulse/cli/metadata"
+	"github.com/buildpulse/test-reporter/cmd"
+	"github.com/buildpulse/test-reporter/metadata"
 )
 
 // set at buildtime via ldflags

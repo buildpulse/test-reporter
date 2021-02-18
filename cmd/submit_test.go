@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/buildpulse/cli/metadata"
+	"github.com/buildpulse/test-reporter/metadata"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/uuid"
