@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/buildpulse/test-reporter/cmd"
-	"github.com/buildpulse/test-reporter/metadata"
+	"github.com/buildpulse/test-reporter/internal/metadata"
 )
 
 // set at buildtime via ldflags
