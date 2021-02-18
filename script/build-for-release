@@ -10,15 +10,16 @@ if ! [ -z "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+PACKAGE="./cmd/test-reporter"
 COMMIT=$(git rev-parse --short=7 HEAD)
 LDFLAGS="-s -w -X main.Version=$1 -X main.Commit=$COMMIT"
 
 cd "$(dirname "$0")/.."
 
 echo "🍎🍎🍎 Building Mac"
-GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o bin/test-reporter-darwin-amd64 .
+GOOS=darwin GOARCH=amd64 go build -ldflags="$LDFLAGS" -o bin/test-reporter-darwin-amd64 $PACKAGE
 upx -1 -q bin/test-reporter-darwin-amd64
 
 echo "🐧🐧🐧 Building Linux"
-GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o bin/test-reporter-linux-amd64 .
+GOOS=linux GOARCH=amd64 go build -ldflags="$LDFLAGS" -o bin/test-reporter-linux-amd64 $PACKAGE
 upx -1 -q bin/test-reporter-linux-amd64

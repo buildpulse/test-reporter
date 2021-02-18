@@ -27,7 +27,7 @@ jobs:
         go get gotest.tools/gotestsum
 
     - name: Build
-      run: go build -v .
+      run: go build -v ./...
 
     - name: Lint
       run: golint -set_exit_status ./...
