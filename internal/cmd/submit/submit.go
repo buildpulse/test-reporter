@@ -342,6 +342,9 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 			WithRegion("us-east-2").
 			WithHTTPClient(client),
 	)
+	if err != nil {
+		return err
+	}
 
 	file, err := os.Open(src)
 	if err != nil {
