@@ -230,6 +230,7 @@ func (s *Submit) Run() (string, error) {
 	}
 	s.logger.Printf("Gzipped archive written to %s", path)
 
+	s.logger.Printf("Sending %s to BuildPulse", path)
 	key, err := s.upload(path)
 	if err != nil {
 		return "", err
@@ -244,7 +245,6 @@ func (s *Submit) upload(path string) (string, error) {
 	bucket := fmt.Sprintf("%d.buildpulse-uploads", s.accountID)
 	key := fmt.Sprintf("%d/buildpulse-%s.gz", s.repositoryID, s.idgen())
 
-	s.logger.Printf("Sending %s to BuildPulse", path)
 	err := putS3Object(s.client, s.credentials.AccessKeyID, s.credentials.SecretAccessKey, bucket, key, path)
 	if err != nil {
 		return "", err
