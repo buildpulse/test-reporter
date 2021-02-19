@@ -40,6 +40,7 @@ func newProviderMetadata(envs map[string]string, log logger.Logger) (providerMet
 	default:
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
 	}
+	log.Printf("Detected build environment: %s", pm.Name())
 
 	if err := pm.Init(envs, log); err != nil {
 		return nil, err
