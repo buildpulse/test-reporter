@@ -82,6 +82,8 @@ func (b *buildkiteMetadata) Init(envs map[string]string, log logger.Logger) erro
 		return err
 	}
 
+	log.Printf("Using $BUILDKITE_COMMIT environment variable as commit SHA: %s", b.BuildkiteCommit)
+
 	nwo, err := nameWithOwnerFromGitURL(b.BuildkiteRepoURL)
 	if err != nil {
 		return err
@@ -140,6 +142,8 @@ func (c *circleMetadata) Init(envs map[string]string, log logger.Logger) error {
 		return err
 	}
 
+	log.Printf("Using $CIRCLE_SHA1 environment variable as commit SHA: %s", c.CircleSHA1)
+
 	return nil
 }
 
@@ -188,6 +192,8 @@ func (g *githubMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
 		return err
 	}
+
+	log.Printf("Using $GITHUB_SHA environment variable as commit SHA: %s", g.GithubSHA)
 
 	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.GithubRepoNWO)
 
@@ -245,6 +251,8 @@ func (j *jenkinsMetadata) Init(envs map[string]string, log logger.Logger) error 
 	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
 		return err
 	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", j.GitCommit)
 
 	url, ok := envs["BUILD_URL"]
 	if !ok || url == "" {
@@ -311,6 +319,8 @@ func (s *semaphoreMetadata) Init(envs map[string]string, log logger.Logger) erro
 		return err
 	}
 
+	log.Printf("Using $SEMAPHORE_GIT_SHA environment variable as commit SHA: %s", s.SemaphoreGitSHA)
+
 	return nil
 }
 
@@ -368,6 +378,8 @@ func (t *travisMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
 		return err
 	}
+
+	log.Printf("Using $TRAVIS_COMMIT environment variable as commit SHA: %s", t.TravisCommit)
 
 	prNum, err := strconv.ParseUint(t.TravisPullRequest, 0, 0)
 	if err == nil {
