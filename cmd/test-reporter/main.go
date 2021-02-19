@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/buildpulse/test-reporter/internal/cmd/submit"
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/buildpulse/test-reporter/internal/metadata"
 )
 
@@ -60,7 +61,7 @@ func main() {
 	case *version || os.Args[1] == "version":
 		fmt.Print(getVersion().String())
 	case os.Args[1] == "submit" && len(os.Args) > 2:
-		c := submit.NewSubmit(getVersion())
+		c := submit.NewSubmit(getVersion(), logger.New(os.Stdout))
 		envs := toMap(os.Environ())
 		if err := c.Init(os.Args[2:], envs, submit.NewCommitResolverFactory()); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)

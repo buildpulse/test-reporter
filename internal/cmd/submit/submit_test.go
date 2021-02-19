@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/buildpulse/test-reporter/internal/metadata"
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
@@ -36,7 +37,7 @@ func TestSubmit_Init(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Run("MinimumRequiredArgs", func(t *testing.T) {
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init([]string{resultsDir, "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, new(stubCommitResolverFactory))
 		assert.NoError(t, err)
 		assert.Equal(t, resultsDir, s.path)
@@ -52,7 +53,7 @@ func TestSubmit_Init(t *testing.T) {
 	t.Run("WithRepositoryDirArg", func(t *testing.T) {
 		repoDir := t.TempDir()
 
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init(
 			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
 			exampleEnv,
@@ -65,7 +66,7 @@ func TestSubmit_Init(t *testing.T) {
 	})
 
 	t.Run("WithTreeArg", func(t *testing.T) {
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init(
 			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--tree", "0000000000000000000000000000000000000000"},
 			exampleEnv,
@@ -140,7 +141,7 @@ func TestSubmit_Init_invalidArgs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := NewSubmit(&metadata.Version{})
+			s := NewSubmit(&metadata.Version{}, logger.New())
 			err := s.Init(strings.Split(tt.args, " "), exampleEnv, &stubCommitResolverFactory{})
 			if assert.Error(t, err) {
 				assert.Regexp(t, tt.errMsg, err.Error())
@@ -192,7 +193,7 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 			dir, err := os.Getwd()
 			require.NoError(t, err)
 
-			s := NewSubmit(&metadata.Version{})
+			s := NewSubmit(&metadata.Version{}, logger.New())
 			err = s.Init([]string{dir, "--account-id", "42", "--repository-id", "8675309"}, tt.envVars, &stubCommitResolverFactory{})
 			if assert.Error(t, err) {
 				assert.Equal(t, tt.errMsg, err.Error())
@@ -203,7 +204,7 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 
 func TestSubmit_Init_invalidPath(t *testing.T) {
 	t.Run("NonexistentPath", func(t *testing.T) {
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init([]string{"some-nonexistent-path", "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, &stubCommitResolverFactory{})
 		if assert.Error(t, err) {
 			assert.Equal(t, "path is not a directory: some-nonexistent-path", err.Error())
@@ -215,7 +216,7 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init([]string{tmpfile.Name(), "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, &stubCommitResolverFactory{})
 		if assert.Error(t, err) {
 			assert.Regexp(t, "path is not a directory: ", err.Error())
@@ -226,7 +227,7 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 	t.Run("NonRepoPath", func(t *testing.T) {
 		t.Skip("skipping while git metadata functionality is experimental")
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init([]string{
 			".",
 			"--account-id", "42",
@@ -242,7 +243,7 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 	})
 
 	t.Run("NonexistentRepoPath", func(t *testing.T) {
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init([]string{
 			".",
 			"--account-id", "42",
@@ -262,7 +263,7 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 
-		s := NewSubmit(&metadata.Version{})
+		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init([]string{
 			".",
 			"--account-id", "42",
@@ -296,6 +297,7 @@ func TestSubmit_Run(t *testing.T) {
 		client:         &http.Client{Transport: r},
 		diagnostics:    &log{},
 		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
+		logger:         logger.New(),
 		version:        &metadata.Version{Number: "v1.2.3"},
 		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}),
 		envs:           envs,
@@ -378,6 +380,7 @@ func Test_upload(t *testing.T) {
 				client:       &http.Client{Transport: r},
 				diagnostics:  &log{},
 				idgen:        func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
+				logger:       logger.New(),
 				accountID:    tt.accountID,
 				repositoryID: 8675309,
 				credentials: credentials{

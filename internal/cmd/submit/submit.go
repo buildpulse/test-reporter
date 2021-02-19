@@ -92,13 +92,13 @@ type Submit struct {
 }
 
 // NewSubmit creates a new Submit instance.
-func NewSubmit(version *metadata.Version) *Submit {
+func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s := &Submit{
 		client:      http.DefaultClient,
 		diagnostics: &log{},
 		fs:          flag.NewFlagSet("submit", flag.ContinueOnError),
 		idgen:       uuid.New,
-		logger:      logger.New(),
+		logger:      log,
 		version:     version,
 	}
 

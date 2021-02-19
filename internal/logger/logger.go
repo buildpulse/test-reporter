@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	"log"
-	"os"
 )
 
 // Logger TODO Add docs
@@ -32,9 +31,13 @@ func (l *logger) Text() string {
 }
 
 // New TODO Add docs
-func New() Logger {
+func New(writers ...io.Writer) Logger {
 	var buffer bytes.Buffer
-	w := io.MultiWriter(&buffer, os.Stdout)
+
+	var logWriters []io.Writer
+	logWriters = append(logWriters, &buffer)
+	logWriters = append(logWriters, writers...)
+	w := io.MultiWriter(logWriters...)
 
 	return &logger{
 		buffer: &buffer,
