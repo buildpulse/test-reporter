@@ -164,23 +164,35 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 		return fmt.Errorf("invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
 	}
 
+	s.envs = envs
+
 	if flagset["tree"] {
+		s.logger.Printf("Using value of -tree flag as the tree SHA for this submission: %s", s.tree)
 		s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{TreeSHA: s.tree})
-	} else {
-		s.commitResolver, err = commitResolverFactory.NewFromRepository(s.repositoryPath)
-		if err != nil {
-			// Git metadata functionality is experimental. While it's experimental,
-			// don't let an invalid repository prevent the test-reporter from
-			// continuing normal operation. Instead, print a warning message and use a
-			// CommitResolver that returns an empty Commit.
-			warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
-			s.logger.Printf("warning: %v", warning)
-			fmt.Fprint(os.Stderr, warning)
-			s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
-		}
+		return nil
 	}
 
-	s.envs = envs
+	if !flagset["repository-dir"] {
+		s.logger.Printf("Using default value for -repository-dir flag: %s", s.repositoryPath)
+	}
+
+	s.logger.Printf("Looking for git repository at %s", s.repositoryPath)
+	s.commitResolver, err = commitResolverFactory.NewFromRepository(s.repositoryPath)
+	if err != nil {
+		// Git metadata functionality is experimental. While it's experimental,
+		// don't let an invalid repository prevent the test-reporter from continuing
+		// normal operation. Use a CommitResolver that returns an empty Commit.
+		s.logger.Printf("⚠️")
+		s.logger.Printf("⚠️ WARNING")
+		s.logger.Printf("⚠️ Unable to read git repository at %s: %v", s.repositoryPath, err)
+		s.logger.Printf("⚠️ Please get in touch at https://buildpulse.io/contact so we can resolve this warning together.")
+		s.logger.Printf("⚠️ In a future release, this issue will become a fatal error.")
+		s.logger.Printf("⚠️")
+
+		s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
+	} else {
+		s.logger.Printf("Found git repository at %s", s.repositoryPath)
+	}
 
 	return nil
 }
