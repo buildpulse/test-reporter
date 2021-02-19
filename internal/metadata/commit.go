@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 )
@@ -28,12 +29,13 @@ type CommitResolver interface {
 }
 
 type repositoryCommitResolver struct {
-	repo *git.Repository
+	logger logger.Logger
+	repo   *git.Repository
 }
 
 // NewRepositoryCommitResolver returns a CommitResolver for looking up commits
 // in the repository located at path.
-func NewRepositoryCommitResolver(path string) (CommitResolver, error) {
+func NewRepositoryCommitResolver(path string, logger logger.Logger) (CommitResolver, error) {
 	repo, err := git.PlainOpenWithOptions(path, &git.PlainOpenOptions{DetectDotGit: true})
 	if err != nil {
 		if err == git.ErrRepositoryNotExists {
@@ -43,14 +45,16 @@ func NewRepositoryCommitResolver(path string) (CommitResolver, error) {
 		return nil, err
 	}
 
-	return &repositoryCommitResolver{repo: repo}, nil
+	return &repositoryCommitResolver{repo: repo, logger: logger}, nil
 }
 
 func (r *repositoryCommitResolver) Lookup(sha string) (*Commit, error) {
+	r.logger.Printf("Looking up info for commit `%s` in git repository", sha)
 	c, err := r.repo.CommitObject(plumbing.NewHash(sha))
 	if err != nil {
 		return nil, fmt.Errorf("unable to find commit with SHA %s: %v", sha, err)
 	}
+	r.logger.Println("Found commit info")
 
 	return &Commit{
 		AuthoredAt:     c.Author.When,

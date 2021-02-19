@@ -37,21 +37,19 @@ type CommitResolverFactory interface {
 }
 
 type defaultCommitResolverFactory struct {
-	// log Logger
+	logger logger.Logger
 }
 
 // NewCommitResolverFactory returns a CommitResolverFactory that creates
 // CommitResolvers with the default production implementations.
-func NewCommitResolverFactory() CommitResolverFactory {
-	// func NewCommitResolverFactory(log Logger) CommitResolverFactory {
-	return &defaultCommitResolverFactory{}
+func NewCommitResolverFactory(logger logger.Logger) CommitResolverFactory {
+	return &defaultCommitResolverFactory{logger: logger}
 }
 
 // NewFromRepository returns a CommitResolver for looking up commits in the
 // repository located at path.
 func (d *defaultCommitResolverFactory) NewFromRepository(path string) (metadata.CommitResolver, error) {
-	// return metadata.NewRepositoryCommitResolver(path, d.log)
-	return metadata.NewRepositoryCommitResolver(path)
+	return metadata.NewRepositoryCommitResolver(path, d.logger)
 }
 
 // NewFromStaticValue returns a CommitResolver whose Lookup method always

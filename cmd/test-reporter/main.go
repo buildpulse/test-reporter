@@ -61,9 +61,10 @@ func main() {
 	case *version || os.Args[1] == "version":
 		fmt.Print(getVersion().String())
 	case os.Args[1] == "submit" && len(os.Args) > 2:
-		c := submit.NewSubmit(getVersion(), logger.New(os.Stdout))
+		log := logger.New(os.Stdout)
+		c := submit.NewSubmit(getVersion(), log)
 		envs := toMap(os.Environ())
-		if err := c.Init(os.Args[2:], envs, submit.NewCommitResolverFactory()); err != nil {
+		if err := c.Init(os.Args[2:], envs, submit.NewCommitResolverFactory(log)); err != nil {
 			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
 			os.Exit(1)
 		}

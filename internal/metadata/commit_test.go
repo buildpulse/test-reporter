@@ -5,13 +5,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/otiai10/copy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewRepositoryCommitResolver_invalidRepo(t *testing.T) {
-	_, err := NewRepositoryCommitResolver(t.TempDir())
+	_, err := NewRepositoryCommitResolver(t.TempDir(), logger.New())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "no repository found")
 	}
@@ -22,7 +23,7 @@ func Test_repositoryCommitResolver_Lookup(t *testing.T) {
 	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
-	r, err := NewRepositoryCommitResolver(dir)
+	r, err := NewRepositoryCommitResolver(dir, logger.New())
 	require.NoError(t, err)
 
 	c, err := r.Lookup("5974e4edce87279f60adaf55c2adcee8847b2612")
@@ -44,7 +45,7 @@ func Test_repositoryCommitResolver_Lookup_notFound(t *testing.T) {
 	err := copy.Copy("./testdata/example-repository.git", path.Join(dir, ".git"))
 	require.NoError(t, err)
 
-	r, err := NewRepositoryCommitResolver(dir)
+	r, err := NewRepositoryCommitResolver(dir, logger.New())
 	require.NoError(t, err)
 
 	_, err = r.Lookup("0000000000000000000000000000000000000000")

@@ -31,18 +31,19 @@ type Metadata struct {
 	Timestamp            time.Time `yaml:":timestamp"`
 	TreeSHA              string    `yaml:":tree,omitempty"`
 
+	logger       logger.Logger
 	providerData providerMetadata
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log logger.Logger) (*Metadata, error) {
-	m := &Metadata{}
+func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, logger logger.Logger) (*Metadata, error) {
+	m := &Metadata{logger: logger}
 
-	if err := m.initProviderData(envs, log); err != nil {
+	if err := m.initProviderData(envs); err != nil {
 		return nil, err
 	}
 
-	if err := m.initCommitData(resolver, m.providerData.CommitSHA(), log); err != nil {
+	if err := m.initCommitData(resolver, m.providerData.CommitSHA()); err != nil {
 		return nil, err
 	}
 
@@ -52,8 +53,8 @@ func NewMetadata(version *Version, envs map[string]string, resolver CommitResolv
 	return m, nil
 }
 
-func (m *Metadata) initProviderData(envs map[string]string, log logger.Logger) error {
-	pm, err := newProviderMetadata(envs, log)
+func (m *Metadata) initProviderData(envs map[string]string) error {
+	pm, err := newProviderMetadata(envs, m.logger)
 	if err != nil {
 		return err
 	}
@@ -74,13 +75,13 @@ func (m *Metadata) initProviderData(envs map[string]string, log logger.Logger) e
 	return nil
 }
 
-func (m *Metadata) initCommitData(cr CommitResolver, sha string, log Logger) error {
+func (m *Metadata) initCommitData(cr CommitResolver, sha string) error {
 	m.CommitMetadataSource = cr.Source()
 
 	// Git metadata functionality is experimental. While it's experimental, don't let this error prevent the test-reporter from continuing normal operation. Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
-		log.Printf("[experimental] commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
+		m.logger.Printf("[experimental] commit lookup unsuccessful; falling back to commit data from environment: %v\n", err)
 
 		m.CommitSHA = sha
 		return nil
