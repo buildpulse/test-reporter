@@ -161,7 +161,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 
 	info, err = os.Stat(s.repositoryPath)
 	if err != nil || !info.IsDir() {
-		return fmt.Errorf("[experimental] invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
+		return fmt.Errorf("invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
 	}
 
 	if flagset["tree"] {
