@@ -51,35 +51,39 @@ type CommitResolverFactory interface {
 	NewFromStaticValue(commit *metadata.Commit) metadata.CommitResolver
 }
 
-type defaultCommitResolverFactory struct{}
+type defaultCommitResolverFactory struct {
+	log Logger
+}
 
 // NewCommitResolverFactory returns a CommitResolverFactory that creates
 // CommitResolvers with the default production implementations.
 func NewCommitResolverFactory() CommitResolverFactory {
+	// func NewCommitResolverFactory(log Logger) CommitResolverFactory {
 	return &defaultCommitResolverFactory{}
 }
 
 // NewFromRepository returns a CommitResolver for looking up commits in the
 // repository located at path.
 func (d *defaultCommitResolverFactory) NewFromRepository(path string) (metadata.CommitResolver, error) {
+	// return metadata.NewRepositoryCommitResolver(path, d.log)
 	return metadata.NewRepositoryCommitResolver(path)
 }
 
 // NewFromStaticValue returns a CommitResolver whose Lookup method always
 // produces a Commit with values matching the fields in commit.
 func (d *defaultCommitResolverFactory) NewFromStaticValue(commit *metadata.Commit) metadata.CommitResolver {
+	// return metadata.NewStaticCommitResolver(commit, d.log)
 	return metadata.NewStaticCommitResolver(commit)
 }
 
 // Submit represents the task of preparing and sending a set of test results to
 // BuildPulse.
 type Submit struct {
-	client      *http.Client
-	diagnostics *log
-	fs          *flag.FlagSet
-	idgen       func() uuid.UUID
-	logger      logger.Logger
-	version     *metadata.Version
+	client  *http.Client
+	fs      *flag.FlagSet
+	idgen   func() uuid.UUID
+	logger  logger.Logger
+	version *metadata.Version
 
 	envs           map[string]string
 	path           string
@@ -94,12 +98,11 @@ type Submit struct {
 // NewSubmit creates a new Submit instance.
 func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s := &Submit{
-		client:      http.DefaultClient,
-		diagnostics: &log{},
-		fs:          flag.NewFlagSet("submit", flag.ContinueOnError),
-		idgen:       uuid.New,
-		logger:      log,
-		version:     version,
+		client:  http.DefaultClient,
+		fs:      flag.NewFlagSet("submit", flag.ContinueOnError),
+		idgen:   uuid.New,
+		logger:  log,
+		version: version,
 	}
 
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
@@ -117,13 +120,13 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
 func (s *Submit) Init(args []string, envs map[string]string, commitResolverFactory CommitResolverFactory) error {
-	s.diagnostics.Printf("args: %+v", args)
+	s.logger.Printf("args: %+v", args)
 
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	s.diagnostics.Printf("working directory: %v", dir)
+	s.logger.Printf("working directory: %v", dir)
 
 	s.path = args[0]
 	isFlag, err := regexp.MatchString("^-", s.path)
@@ -189,7 +192,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 			// continuing normal operation. Instead, print a warning message and use a
 			// CommitResolver that returns an empty Commit.
 			warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
-			s.diagnostics.Printf("warning: %v", warning)
+			s.logger.Printf("warning: %v", warning)
 			fmt.Fprint(os.Stderr, warning)
 			s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
 		}
@@ -203,7 +206,8 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.diagnostics)
+	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, &Logger{}) // TODO Pass s.logger here instead of &Logger{}
+	// meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.log)
 	if err != nil {
 		return "", err
 	}
