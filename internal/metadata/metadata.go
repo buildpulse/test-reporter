@@ -78,7 +78,9 @@ func (m *Metadata) initProviderData(envs map[string]string) error {
 func (m *Metadata) initCommitData(cr CommitResolver, sha string) error {
 	m.CommitMetadataSource = cr.Source()
 
-	// Git metadata functionality is experimental. While it's experimental, don't let this error prevent the test-reporter from continuing normal operation. Allow the commit metadata fields to be uploaded with empty values.
+	// Git metadata functionality is experimental. While it's experimental, don't
+	// let this error prevent the test-reporter from continuing normal operation.
+	// Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
 		m.logger.Printf("⚠️")
