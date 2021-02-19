@@ -81,7 +81,6 @@ func (r *repositoryCommitResolver) Source() string {
 
 type staticCommitResolver struct {
 	commit *Commit
-	logger logger.Logger
 }
 
 // NewStaticCommitResolver returns a CommitResolver whose Lookup method always
