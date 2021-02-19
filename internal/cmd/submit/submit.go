@@ -211,7 +211,7 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
-	s.logger.Printf("Preparing gzipped archive of test reports and metadata at %s", s.path)
+	s.logger.Printf("Preparing gzipped archive of test results and metadata at %s", s.path)
 	path, err := toTarGz(s.path)
 	if err != nil {
 		return "", err
