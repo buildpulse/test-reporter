@@ -172,6 +172,7 @@ func TestNewMetadata(t *testing.T) {
 					Message:        "Some message",
 					TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
 				},
+				logger.New(),
 			)
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
@@ -235,5 +236,5 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 }
 
 func newCommitResolverStub() CommitResolver {
-	return NewStaticCommitResolver(&Commit{})
+	return NewStaticCommitResolver(&Commit{}, logger.New())
 }

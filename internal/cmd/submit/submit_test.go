@@ -293,12 +293,13 @@ func TestSubmit_Run(t *testing.T) {
 		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
 	}
 
+	log := logger.New()
 	s := &Submit{
 		client:         &http.Client{Transport: r},
 		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
-		logger:         logger.New(),
+		logger:         log,
 		version:        &metadata.Version{Number: "v1.2.3"},
-		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}),
+		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
 		envs:           envs,
 		path:           dir,
 		accountID:      42,

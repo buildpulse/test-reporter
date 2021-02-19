@@ -75,11 +75,12 @@ func (r *repositoryCommitResolver) Source() string {
 
 type staticCommitResolver struct {
 	commit *Commit
+	logger logger.Logger
 }
 
 // NewStaticCommitResolver returns a CommitResolver whose Lookup method always
 // produces a Commit with values matching the fields in c.
-func NewStaticCommitResolver(c *Commit) CommitResolver {
+func NewStaticCommitResolver(c *Commit, logger logger.Logger) CommitResolver {
 	return &staticCommitResolver{commit: c}
 }
 

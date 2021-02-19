@@ -55,8 +55,7 @@ func (d *defaultCommitResolverFactory) NewFromRepository(path string) (metadata.
 // NewFromStaticValue returns a CommitResolver whose Lookup method always
 // produces a Commit with values matching the fields in commit.
 func (d *defaultCommitResolverFactory) NewFromStaticValue(commit *metadata.Commit) metadata.CommitResolver {
-	// return metadata.NewStaticCommitResolver(commit, d.log)
-	return metadata.NewStaticCommitResolver(commit)
+	return metadata.NewStaticCommitResolver(commit, d.logger)
 }
 
 // Submit represents the task of preparing and sending a set of test results to
