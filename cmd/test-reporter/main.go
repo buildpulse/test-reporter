@@ -68,12 +68,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
 			os.Exit(1)
 		}
-		key, err := c.Run()
+		_, err := c.Run()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
-		fmt.Printf("Delivered test results to BuildPulse (%s)\n", key)
 	default:
 		flag.Usage()
 		os.Exit(1)

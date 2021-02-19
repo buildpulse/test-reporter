@@ -214,7 +214,13 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
-	return s.upload(path)
+	key, err := s.upload(path)
+	if err != nil {
+		return "", err
+	}
+	s.logger.Printf("Delivered test results to BuildPulse (%s)", key)
+
+	return key, nil
 }
 
 // upload transmits the file at the given path to S3
