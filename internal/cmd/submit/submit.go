@@ -19,6 +19,7 @@ import (
 	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/buildpulse/test-reporter/internal/metadata"
 	"github.com/google/uuid"
 )
@@ -77,6 +78,7 @@ type Submit struct {
 	diagnostics *log
 	fs          *flag.FlagSet
 	idgen       func() uuid.UUID
+	logger      logger.Logger
 	version     *metadata.Version
 
 	envs           map[string]string
@@ -96,6 +98,7 @@ func NewSubmit(version *metadata.Version) *Submit {
 		diagnostics: &log{},
 		fs:          flag.NewFlagSet("submit", flag.ContinueOnError),
 		idgen:       uuid.New,
+		logger:      logger.New(),
 		version:     version,
 	}
 
@@ -104,6 +107,9 @@ func NewSubmit(version *metadata.Version) *Submit {
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
 	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
+
+	s.logger.Printf("Current version: %s", s.version.String())
+	s.logger.Println("Initiating `submit`")
 
 	return s
 }
