@@ -184,7 +184,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 			// CommitResolver that returns an empty Commit.
 			warning := fmt.Sprintf("[experimental] invalid value for flag -repository-dir: %v\n", err)
 			s.diagnostics.Printf("warning: %v", warning)
-			fmt.Fprintf(os.Stderr, warning)
+			fmt.Fprint(os.Stderr, warning)
 			s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
 		}
 	}
@@ -217,6 +217,9 @@ func (s *Submit) Run() (string, error) {
 	}
 
 	path, err := toTarGz(s.path)
+	if err != nil {
+		return "", err
+	}
 
 	return s.upload(path)
 }
@@ -339,6 +342,9 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 			WithRegion("us-east-2").
 			WithHTTPClient(client),
 	)
+	if err != nil {
+		return err
+	}
 
 	file, err := os.Open(src)
 	if err != nil {
