@@ -193,11 +193,13 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
+	yamlpath := filepath.Join(s.path, "buildpulse.yml")
+	s.logger.Printf("Writing metadata to %s", yamlpath)
 	yaml, err := meta.MarshalYAML()
 	if err != nil {
 		return "", err
 	}
-	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.yml"), yaml, 0644)
+	err = ioutil.WriteFile(yamlpath, yaml, 0644)
 	if err != nil {
 		return "", err
 	}
@@ -209,10 +211,12 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
+	s.logger.Printf("Preparing gzipped archive of test reports and metadata at %s", s.path)
 	path, err := toTarGz(s.path)
 	if err != nil {
 		return "", err
 	}
+	s.logger.Printf("Gzipped archive written to %s", path)
 
 	key, err := s.upload(path)
 	if err != nil {
