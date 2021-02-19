@@ -217,8 +217,9 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
-	// <buildpulse> Flushing log to <path/to/buildpulse.log>
-	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(s.logger.Text()), 0644)
+	logpath := filepath.Join(s.path, "buildpulse.log")
+	s.logger.Printf("Flushing log to %s", logpath)
+	err = ioutil.WriteFile(logpath, []byte(s.logger.Text()), 0644)
 	if err != nil {
 		return "", err
 	}
