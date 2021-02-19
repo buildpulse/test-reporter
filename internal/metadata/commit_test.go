@@ -50,6 +50,6 @@ func Test_repositoryCommitResolver_Lookup_notFound(t *testing.T) {
 
 	_, err = r.Lookup("0000000000000000000000000000000000000000")
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "unable to find commit with SHA 0000000000000000000000000000000000000000")
+		assert.Contains(t, err.Error(), "unable to find commit with SHA `0000000000000000000000000000000000000000`")
 	}
 }

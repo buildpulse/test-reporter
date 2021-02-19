@@ -52,7 +52,7 @@ func (r *repositoryCommitResolver) Lookup(sha string) (*Commit, error) {
 	r.logger.Printf("Looking up info for commit `%s` in git repository", sha)
 	c, err := r.repo.CommitObject(plumbing.NewHash(sha))
 	if err != nil {
-		return nil, fmt.Errorf("unable to find commit with SHA %s: %v", sha, err)
+		return nil, fmt.Errorf("unable to find commit with SHA `%s`: %v", sha, err)
 	}
 	r.logger.Println("Found commit info")
 
