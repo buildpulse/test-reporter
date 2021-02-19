@@ -112,13 +112,14 @@ type emptyCommitResolver struct {
 }
 
 // NewEmptyCommitResolver returns a CommitResolver whose Lookup method always
-// produces an empty Commit.
+// produces a Commit that only contains the given commit SHA and no other
+// metadata.
 func NewEmptyCommitResolver(logger logger.Logger) CommitResolver {
 	return &emptyCommitResolver{logger: logger}
 }
 
 func (e *emptyCommitResolver) Lookup(sha string) (*Commit, error) {
-	return &Commit{}, nil
+	return &Commit{SHA: sha}, nil
 }
 
 func (e *emptyCommitResolver) Source() string {
