@@ -111,6 +111,9 @@ func NewSubmit(version *metadata.Version) *Submit {
 	s.logger.Printf("Current version: %s", s.version.String())
 	s.logger.Println("Initiating `submit`")
 
+	fmt.Println("👋👋👋👋 Dumping buffer")
+	fmt.Println(s.logger.Text())
+
 	return s
 }
 
