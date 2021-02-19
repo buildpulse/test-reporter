@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -104,7 +105,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
 func (s *Submit) Init(args []string, envs map[string]string, commitResolverFactory CommitResolverFactory) error {
-	s.logger.Printf("Received args: %+v", args)
+	s.logger.Printf("Received args: %s", strings.Join(args, " "))
 
 	dir, err := os.Getwd()
 	if err != nil {
