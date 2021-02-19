@@ -65,7 +65,7 @@ func main() {
 		c := submit.NewSubmit(getVersion(), log)
 		envs := toMap(os.Environ())
 		if err := c.Init(os.Args[2:], envs, submit.NewCommitResolverFactory(log)); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n\nSee more help with --help\n", err)
+			fmt.Fprintf(os.Stderr, "\n%s\n\nSee more help with --help\n", err)
 			os.Exit(1)
 		}
 		_, err := c.Run()
