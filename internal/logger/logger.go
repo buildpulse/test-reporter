@@ -6,11 +6,11 @@ import (
 	"log"
 )
 
-// Logger TODO Add docs
+// A Logger represents a mechanism for logging. 🙃
 type Logger interface {
 	Printf(format string, v ...interface{})
 	Println(v ...interface{})
-	Text() string // TODO Probably document what this does
+	Text() string
 }
 
 type logger struct {
@@ -26,6 +26,7 @@ func (l *logger) Println(v ...interface{}) {
 	l.log.Println(v...)
 }
 
+// Text returns a string concatenation of all of the log's entries.
 func (l *logger) Text() string {
 	return l.buffer.String()
 }

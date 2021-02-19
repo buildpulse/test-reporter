@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -174,7 +175,7 @@ func TestNewMetadata(t *testing.T) {
 			)
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, commitResolver, now, newLoggerStub())
+			meta, err := NewMetadata(version, tt.envs, commitResolver, now, logger.New())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -185,7 +186,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, newLoggerStub())
+	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, logger.New())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "unrecognized environment")
 	}
@@ -223,7 +224,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, newLoggerStub())
+			meta, err := NewMetadata(&Version{}, tt.envs, newCommitResolverStub(), time.Now, logger.New())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -235,12 +236,4 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 
 func newCommitResolverStub() CommitResolver {
 	return NewStaticCommitResolver(&Commit{})
-}
-
-type loggerStub struct{}
-
-func (l *loggerStub) Printf(format string, v ...interface{}) {}
-
-func newLoggerStub() Logger {
-	return &loggerStub{}
 }

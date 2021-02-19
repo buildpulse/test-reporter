@@ -6,13 +6,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/caarlos0/env/v6"
 )
 
 // A providerMetadata instance supplies the metadata for a build taking place on
 // a specific CI provider (e.g., CircleCI, GitHub Actions, etc.).
 type providerMetadata interface {
-	Init(envs map[string]string, log Logger) error
+	Init(envs map[string]string, log logger.Logger) error
 	Branch() string
 	BuildURL() string
 	CommitSHA() string
@@ -20,7 +21,7 @@ type providerMetadata interface {
 	RepoNameWithOwner() string
 }
 
-func newProviderMetadata(envs map[string]string, log Logger) (providerMetadata, error) {
+func newProviderMetadata(envs map[string]string, log logger.Logger) (providerMetadata, error) {
 	var pm providerMetadata
 
 	switch {
@@ -75,7 +76,7 @@ type buildkiteMetadata struct {
 	nwo string
 }
 
-func (b *buildkiteMetadata) Init(envs map[string]string, log Logger) error {
+func (b *buildkiteMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(b, env.Options{Environment: envs}); err != nil {
 		return err
 	}
@@ -133,7 +134,7 @@ type circleMetadata struct {
 	CircleWorkflowID          string `env:"CIRCLE_WORKFLOW_ID" yaml:":circle_workflow_id"`
 }
 
-func (c *circleMetadata) Init(envs map[string]string, log Logger) error {
+func (c *circleMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(c, env.Options{Environment: envs}); err != nil {
 		return err
 	}
@@ -182,7 +183,7 @@ type githubMetadata struct {
 	buildURL string
 }
 
-func (g *githubMetadata) Init(envs map[string]string, log Logger) error {
+func (g *githubMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(g, env.Options{Environment: envs}); err != nil {
 		return err
 	}
@@ -239,7 +240,7 @@ type jenkinsMetadata struct {
 	nwo      string
 }
 
-func (j *jenkinsMetadata) Init(envs map[string]string, log Logger) error {
+func (j *jenkinsMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(j, env.Options{Environment: envs}); err != nil {
 		return err
 	}
@@ -304,7 +305,7 @@ type semaphoreMetadata struct {
 	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
-func (s *semaphoreMetadata) Init(envs map[string]string, log Logger) error {
+func (s *semaphoreMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(s, env.Options{Environment: envs}); err != nil {
 		return err
 	}
@@ -362,7 +363,7 @@ type travisMetadata struct {
 	TravisTestResult        uint   `env:"TRAVIS_TEST_RESULT" yaml:":travis_test_result"`
 }
 
-func (t *travisMetadata) Init(envs map[string]string, log Logger) error {
+func (t *travisMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(t, env.Options{Environment: envs}); err != nil {
 		return err
 	}

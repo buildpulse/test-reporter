@@ -12,7 +12,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -29,21 +28,6 @@ type credentials struct {
 	SecretAccessKey string
 }
 
-// A log object can be passed around for use as a logger. It stores logs
-// in memory and can flush the logs to a string when requested.
-type log struct {
-	entries []string
-}
-
-func (l *log) Printf(format string, v ...interface{}) {
-	l.entries = append(l.entries, fmt.Sprintf(format, v...))
-}
-
-// Text returns a string concatenation of all of the log's entries.
-func (l *log) Text() string {
-	return strings.Join(l.entries, "\n")
-}
-
 // A CommitResolverFactory provides methods for creating a
 // metadata.CommitResolver.
 type CommitResolverFactory interface {
@@ -52,7 +36,7 @@ type CommitResolverFactory interface {
 }
 
 type defaultCommitResolverFactory struct {
-	log Logger
+	// log Logger
 }
 
 // NewCommitResolverFactory returns a CommitResolverFactory that creates
@@ -206,8 +190,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, &Logger{}) // TODO Pass s.logger here instead of &Logger{}
-	// meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.log)
+	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.logger)
 	if err != nil {
 		return "", err
 	}

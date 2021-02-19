@@ -4,6 +4,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/buildpulse/test-reporter/internal/logger"
 	"gopkg.in/yaml.v2"
 )
 
@@ -34,7 +35,7 @@ type Metadata struct {
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log Logger) (*Metadata, error) {
+func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, log logger.Logger) (*Metadata, error) {
 	m := &Metadata{}
 
 	if err := m.initProviderData(envs, log); err != nil {
@@ -51,7 +52,7 @@ func NewMetadata(version *Version, envs map[string]string, resolver CommitResolv
 	return m, nil
 }
 
-func (m *Metadata) initProviderData(envs map[string]string, log Logger) error {
+func (m *Metadata) initProviderData(envs map[string]string, log logger.Logger) error {
 	pm, err := newProviderMetadata(envs, log)
 	if err != nil {
 		return err
