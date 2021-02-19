@@ -101,3 +101,21 @@ func (s *staticCommitResolver) Lookup(sha string) (*Commit, error) {
 func (s *staticCommitResolver) Source() string {
 	return "Static"
 }
+
+type emptyCommitResolver struct {
+	logger logger.Logger
+}
+
+// NewEmptyCommitResolver returns a CommitResolver whose Lookup method always
+// produces an empty Commit.
+func NewEmptyCommitResolver(logger logger.Logger) CommitResolver {
+	return &emptyCommitResolver{logger: logger}
+}
+
+func (e *emptyCommitResolver) Lookup(sha string) (*Commit, error) {
+	return &Commit{}, nil
+}
+
+func (e *emptyCommitResolver) Source() string {
+	return "Empty"
+}

@@ -189,7 +189,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 		s.logger.Printf("⚠️ In a future release, this issue will become a fatal error.")
 		s.logger.Printf("⚠️")
 
-		s.commitResolver = commitResolverFactory.NewFromStaticValue(&metadata.Commit{})
+		s.commitResolver = metadata.NewEmptyCommitResolver(s.logger)
 	} else {
 		s.logger.Printf("Found git repository at %s", s.repositoryPath)
 	}
