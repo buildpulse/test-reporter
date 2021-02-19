@@ -104,13 +104,13 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 // Init populates s from args and envs. It returns an error if the required args
 // or environment variables are missing or malformed.
 func (s *Submit) Init(args []string, envs map[string]string, commitResolverFactory CommitResolverFactory) error {
-	s.logger.Printf("args: %+v", args)
+	s.logger.Printf("Received args: %+v", args)
 
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
 	}
-	s.logger.Printf("working directory: %v", dir)
+	s.logger.Printf("Using working directory: %v", dir)
 
 	s.path = args[0]
 	isFlag, err := regexp.MatchString("^-", s.path)
