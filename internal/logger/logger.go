@@ -31,7 +31,8 @@ func (l *logger) Text() string {
 	return l.buffer.String()
 }
 
-// New TODO Add docs
+// New returns a Logger that writes to writers and an in-memory store for
+// on-demand access to log entries via the Text() method.
 func New(writers ...io.Writer) Logger {
 	var buffer bytes.Buffer
 
@@ -42,6 +43,6 @@ func New(writers ...io.Writer) Logger {
 
 	return &logger{
 		buffer: &buffer,
-		log:    log.New(w, "<buildpulse> ", 0), // TODO: Do I have a _current_ need for any of these args to be configurable outside of this method?
+		log:    log.New(w, "<buildpulse> ", 0),
 	}
 }
