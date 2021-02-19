@@ -111,9 +111,6 @@ func NewSubmit(version *metadata.Version) *Submit {
 	s.logger.Printf("Current version: %s", s.version.String())
 	s.logger.Println("Initiating `submit`")
 
-	fmt.Println("👋👋👋👋 Dumping buffer")
-	fmt.Println(s.logger.Text())
-
 	return s
 }
 
@@ -220,7 +217,8 @@ func (s *Submit) Run() (string, error) {
 		return "", err
 	}
 
-	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(s.diagnostics.Text()), 0644)
+	// <buildpulse> Flushing log to <path/to/buildpulse.log>
+	err = ioutil.WriteFile(filepath.Join(s.path, "buildpulse.log"), []byte(s.logger.Text()), 0644)
 	if err != nil {
 		return "", err
 	}
