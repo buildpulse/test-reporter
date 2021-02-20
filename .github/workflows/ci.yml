@@ -49,7 +49,9 @@ jobs:
 
   golangci-lint:
     name: Lint
+
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v2
 
@@ -63,6 +65,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
     steps:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
@@ -73,10 +78,21 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Build executable binaries
-      run: ./script/build-for-release $GITHUB_SHA
+    - name: Get version
+      id: get_version
+      run: |
+        if [[ "$GITHUB_REF" =~ ^refs\/tags\/ ]]; then
+          VERSION=${GITHUB_REF/refs\/tags\//}
+        else
+          VERSION=$GITHUB_SHA
+        fi
+        echo "Version: $VERSION"
+        echo ::set-output name=version::${VERSION}
 
-    - name: Output version
+    - name: Build executable binaries
+      run: ./script/build-for-release ${{ steps.get_version.outputs.version }}
+
+    - name: Output version from binary
       run: ./bin/test-reporter-linux-amd64 --version
 
     - name: Verify binary can successfully package up test results and upload them to BuildPulse
@@ -87,3 +103,58 @@ jobs:
         mkdir -p fake-test-results-dir
         touch fake-test-results-dir/report.xml
         ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
+
+    - name: Upload binaries as artifacts
+      uses: actions/upload-artifact@v2
+      with:
+        name: bin
+        path: bin/
+        retention-days: 1
+
+  create-release:
+    name: Create draft release
+
+    # If the push that triggered this is a tag that starts with "v" (e.g., v1.0.0)
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
+
+    needs: [build, golangci-lint, smoke-test]
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/download-artifact@v2
+
+    - name: Create release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{needs.smoke-test.outputs.version}}
+        release_name: ${{needs.smoke-test.outputs.version}}
+        body: "🚀"
+        draft: true
+        prerelease: ${{ endsWith(github.ref, '-pre') }}
+
+    - name: Upload linux binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: bin/test-reporter-linux-amd64
+        asset_name: test-reporter-linux-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Upload darwin binary
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: bin/test-reporter-darwin-amd64
+        asset_name: test-reporter-darwin-amd64
+        asset_content_type: application/octet-stream
+
+    - name: Print release URL
+      run: echo "${{ steps.create_release.outputs.html_url }}"
