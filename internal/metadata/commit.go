@@ -106,22 +106,3 @@ func (s *staticCommitResolver) Lookup(sha string) (*Commit, error) {
 func (s *staticCommitResolver) Source() string {
 	return "Static"
 }
-
-type emptyCommitResolver struct {
-	logger logger.Logger
-}
-
-// NewEmptyCommitResolver returns a CommitResolver whose Lookup method always
-// produces a Commit that only contains the given commit SHA and no other
-// metadata.
-func NewEmptyCommitResolver(logger logger.Logger) CommitResolver {
-	return &emptyCommitResolver{logger: logger}
-}
-
-func (e *emptyCommitResolver) Lookup(sha string) (*Commit, error) {
-	return &Commit{SHA: sha}, nil
-}
-
-func (e *emptyCommitResolver) Source() string {
-	return "Empty"
-}

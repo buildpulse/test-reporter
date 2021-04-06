@@ -226,7 +226,7 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 
 func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 	t.Run("NonRepoPath", func(t *testing.T) {
-		t.Skip("skipping while git metadata functionality is experimental")
+		log := logger.New()
 		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init([]string{
 			".",
@@ -235,7 +235,7 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 			"--repository-dir", os.TempDir(),
 		},
 			exampleEnv,
-			&stubCommitResolverFactory{},
+			NewCommitResolverFactory(log),
 		)
 		if assert.Error(t, err) {
 			assert.Regexp(t, "invalid value for flag -repository-dir: no repository found at ", err.Error())

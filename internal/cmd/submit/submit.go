@@ -179,20 +179,9 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 	s.logger.Printf("Looking for git repository at %s", s.repositoryPath)
 	s.commitResolver, err = commitResolverFactory.NewFromRepository(s.repositoryPath)
 	if err != nil {
-		// Git metadata functionality is experimental. While it's experimental,
-		// don't let an invalid repository prevent the test-reporter from continuing
-		// normal operation. Use a CommitResolver that returns an empty Commit.
-		s.logger.Printf("⚠️")
-		s.logger.Printf("⚠️ WARNING")
-		s.logger.Printf("⚠️ Unable to read git repository at %s: %v", s.repositoryPath, err)
-		s.logger.Printf("⚠️ Please get in touch at https://buildpulse.io/contact so we can resolve this warning together.")
-		s.logger.Printf("⚠️ In a future release, this issue will become a fatal error.")
-		s.logger.Printf("⚠️")
-
-		s.commitResolver = metadata.NewEmptyCommitResolver(s.logger)
-	} else {
-		s.logger.Printf("Found git repository at %s", s.repositoryPath)
+		return fmt.Errorf("invalid value for flag -repository-dir: %v", err)
 	}
+	s.logger.Printf("Found git repository at %s", s.repositoryPath)
 
 	return nil
 }
