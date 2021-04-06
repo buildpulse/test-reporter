@@ -78,17 +78,15 @@ func (m *Metadata) initProviderData(envs map[string]string) error {
 func (m *Metadata) initCommitData(cr CommitResolver, sha string) error {
 	m.CommitMetadataSource = cr.Source()
 
-	// Git metadata functionality is experimental. While it's experimental, don't
-	// let this error prevent the test-reporter from continuing normal operation.
-	// Allow the commit metadata fields to be uploaded with empty values.
 	c, err := cr.Lookup(sha)
 	if err != nil {
-		m.logger.Printf("⚠️")
-		m.logger.Printf("⚠️ WARNING")
-		m.logger.Printf("⚠️ Commit lookup unsuccessful: %v", err)
-		m.logger.Printf("⚠️ Please get in touch at https://buildpulse.io/contact so we can resolve this warning together.")
-		m.logger.Printf("⚠️ In a future release, this issue will become a fatal error.")
-		m.logger.Printf("⚠️")
+		m.logger.Printf("❌")
+		m.logger.Printf("❌ Commit lookup unsuccessful: %v", err)
+		m.logger.Printf("❌")
+		m.logger.Printf("❌ Test results will not be analyzed for this build. Please get in touch at https://buildpulse.io/contact so we can resolve this problem together.")
+		m.logger.Printf("❌")
+		m.logger.Printf("❌ In a future release, this issue will become a fatal error with a nonzero exit code.")
+		m.logger.Printf("❌")
 
 		m.CommitSHA = sha
 
