@@ -1,0 +1,17 @@
+#!/bin/bash -e
+
+if ! [ -z "$(git status --porcelain)" ]; then
+  echo "git status is not clean"
+  exit 1
+fi
+
+if ! command -v goreleaser &> /dev/null; then
+  curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
+  export PATH="bin:$PATH"
+fi
+
+cd "$(dirname "$0")/.."
+
+goreleaser --snapshot --skip-publish --rm-dist
+
+echo "✅ See binaries in ./dist"

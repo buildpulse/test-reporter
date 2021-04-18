@@ -78,22 +78,11 @@ jobs:
     - name: Check out code into the Go module directory
       uses: actions/checkout@v2
 
-    - name: Get version
-      id: get_version
-      run: |
-        if [[ "$GITHUB_REF" =~ ^refs\/tags\/ ]]; then
-          VERSION=${GITHUB_REF/refs\/tags\//}
-        else
-          VERSION=$GITHUB_SHA
-        fi
-        echo "Version: $VERSION"
-        echo ::set-output name=version::${VERSION}
-
     - name: Build executable binaries
-      run: ./script/build-for-release ${{ steps.get_version.outputs.version }}
+      run: ./script/build-snapshot
 
     - name: Output version from binary
-      run: ./bin/test-reporter-linux-amd64 --version
+      run: ./dist/test_reporter_linux_amd64/test-reporter --version
 
     - name: Verify binary can successfully package up test results and upload them to BuildPulse
       env:
@@ -102,14 +91,7 @@ jobs:
       run: |
         mkdir -p fake-test-results-dir
         touch fake-test-results-dir/report.xml
-        ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
-
-    - name: Upload binaries as artifacts
-      uses: actions/upload-artifact@v2
-      with:
-        name: bin
-        path: bin/
-        retention-days: 1
+        ./dist/test_reporter_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
 
   create-release:
     name: Create draft release

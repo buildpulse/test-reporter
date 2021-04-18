@@ -17,10 +17,10 @@ blocks:
             - checkout
             - sudo apt-get update -y
             - sudo apt-get install -y upx
-            - ./script/build-for-release $SEMAPHORE_GIT_SHA
-            - ./bin/test-reporter-linux-amd64 --version
+            - ./script/build-snapshot
+            - ./dist/test_reporter_linux_amd64/test-reporter --version
             - mkdir -p fake-test-results-dir
             - touch fake-test-results-dir/report.xml
-            - ./bin/test-reporter-linux-amd64 submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
+            - ./dist/test_reporter_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
       secrets:
         - name: buildpulse-credentials
