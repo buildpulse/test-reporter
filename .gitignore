@@ -1,4 +1,5 @@
 /bin
-/test-reporter
 /cli
+/dist
+/test-reporter
 /tmp

@@ -119,42 +119,61 @@ jobs:
 
     needs: [build, golangci-lint, smoke-test]
 
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.16
+      - name: Install upx
+        run: brew install upx
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload binaries as build artifacts for later jobs to consume
+        uses: actions/upload-artifact@v2
+        with:
+          name: dist
+          path: dist/
+          retention-days: 1
+
+  # TODO: Once it's possible to access draft releases with gh and secrets.GITHUB_TOKEN (https://github.com/cli/cli/issues/3037), update this to download the artifact directly from the release for an extra bit of verification
+  verify-alpine:
+    name: Verify binary (Alpine)
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
     - uses: actions/download-artifact@v2
+    - name: 'Verify basic "runnability"'
+      run: docker run --volume $(pwd):/tmp --workdir /tmp alpine:3.12 sh -c "chmod +x dist/test_reporter_linux_amd64/test-reporter && dist/test_reporter_linux_amd64/test-reporter --version"
 
-    - name: Create release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{needs.smoke-test.outputs.version}}
-        release_name: ${{needs.smoke-test.outputs.version}}
-        body: "🚀"
-        draft: true
-        prerelease: ${{ endsWith(github.ref, '-pre') }}
+  verify-macos:
+    name: Verify binary (macOS)
+    needs: create-release
+    runs-on: macos-latest
+    steps:
+    - uses: actions/download-artifact@v2
+    - name: 'Verify basic "runnability"'
+      run: |
+        chmod +x dist/test_reporter_darwin_amd64/test-reporter
+        dist/test_reporter_darwin_amd64/test-reporter --version
 
-    - name: Upload linux binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: bin/test-reporter-linux-amd64
-        asset_name: test-reporter-linux-amd64
-        asset_content_type: application/octet-stream
-
-    - name: Upload darwin binary
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: bin/test-reporter-darwin-amd64
-        asset_name: test-reporter-darwin-amd64
-        asset_content_type: application/octet-stream
-
-    - name: Print release URL
-      run: echo "${{ steps.create_release.outputs.html_url }}"
+  verify-ubuntu:
+    name: Verify binary (Ubuntu)
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/download-artifact@v2
+    - name: 'Verify basic "runnability"'
+      run: |
+        chmod +x dist/test_reporter_linux_amd64/test-reporter
+        dist/test_reporter_linux_amd64/test-reporter --version
