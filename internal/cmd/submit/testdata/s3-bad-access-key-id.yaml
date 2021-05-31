@@ -26,28 +26,30 @@ interactions:
       Content-Md5:
       - 6gFDgFr83IG+LPcNWlCHvw==
       User-Agent:
-      - aws-sdk-go/1.33.7 (go1.14.4; darwin; amd64) S3Manager
+      - aws-sdk-go/1.38.30 (go1.16.4; darwin; amd64) S3Manager
+      X-Amz-Acl:
+      - bucket-owner-full-control
       X-Amz-Content-Sha256:
       - f3f8d97071a55a395844dda7fcf8d8d5aba75001f198ec8b4e704cae6752b24a
       X-Amz-Date:
-      - 20200719T143259Z
-    url: https://s3.us-east-2.amazonaws.com/42.buildpulse-uploads/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
+      - 20210531T214646Z
+    url: https://buildpulse-uploads.s3.amazonaws.com/42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>InvalidAccessKeyId</Code><Message>The AWS Access Key Id you provided does not exist in our records.</Message><AWSAccessKeyId>some-bogus-access-key-id</AWSAccessKeyId><RequestId>58AC6676F94D46D0</RequestId><HostId>QGt3B5LNYCZnL10BuuK1ggBNiZNxvyGvflveIvkfrqZLRJ0WZEC+7P8kSGj4PC2xxYVhSp0t1tU=</HostId></Error>
+      <Error><Code>InvalidAccessKeyId</Code><Message>The AWS Access Key Id you provided does not exist in our records.</Message><AWSAccessKeyId>some-bogus-access-key-id</AWSAccessKeyId><RequestId>V3SN21JQXCN0XBRX</RequestId><HostId>pkBIxHU70/CW12+4y15EH6VV8m5lwDi0WarPpRsoTfTEnXMDHjGp4M0maJ8AWRlVOzFuuep66j8=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Sun, 19 Jul 2020 14:32:59 GMT
+      - Mon, 31 May 2021 21:46:47 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - QGt3B5LNYCZnL10BuuK1ggBNiZNxvyGvflveIvkfrqZLRJ0WZEC+7P8kSGj4PC2xxYVhSp0t1tU=
+      - pkBIxHU70/CW12+4y15EH6VV8m5lwDi0WarPpRsoTfTEnXMDHjGp4M0maJ8AWRlVOzFuuep66j8=
       X-Amz-Request-Id:
-      - 58AC6676F94D46D0
+      - V3SN21JQXCN0XBRX
     status: 403 Forbidden
     code: 403
     duration: ""

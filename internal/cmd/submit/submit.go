@@ -69,6 +69,7 @@ type Submit struct {
 
 	envs           map[string]string
 	path           string
+	bucket         string
 	accountID      uint64
 	repositoryID   uint64
 	repositoryPath string
@@ -149,6 +150,11 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 		return fmt.Errorf("missing required environment variable: BUILDPULSE_SECRET_ACCESS_KEY")
 	}
 	s.credentials.SecretAccessKey = key
+
+	s.bucket, ok = envs["BUILDPULSE_BUCKET"]
+	if !ok {
+		s.bucket = "buildpulse-uploads"
+	}
 
 	if flagset["repository-dir"] && flagset["tree"] {
 		return fmt.Errorf("invalid use of flag -repository-dir with flag -tree: use one or the other, but not both")
@@ -231,10 +237,9 @@ func (s *Submit) Run() (string, error) {
 
 // upload transmits the file at the given path to S3
 func (s *Submit) upload(path string) (string, error) {
-	bucket := fmt.Sprintf("%d.buildpulse-uploads", s.accountID)
-	key := fmt.Sprintf("%d/buildpulse-%s.gz", s.repositoryID, s.idgen())
+	key := fmt.Sprintf("%d/%d/buildpulse-%s.gz", s.accountID, s.repositoryID, s.idgen())
 
-	err := putS3Object(s.client, s.credentials.AccessKeyID, s.credentials.SecretAccessKey, bucket, key, path)
+	err := putS3Object(s.client, s.credentials.AccessKeyID, s.credentials.SecretAccessKey, s.bucket, key, path)
 	if err != nil {
 		return "", err
 	}
@@ -344,7 +349,7 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	sess, err := session.NewSession(
 		aws.NewConfig().
 			WithCredentials(awscreds.NewCredentials(provider)).
-			WithRegion("us-east-2").
+			WithRegion("us-east-1").
 			WithHTTPClient(client),
 	)
 	if err != nil {
@@ -361,6 +366,7 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	_, err = uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(objectKey),
+		ACL:    aws.String("bucket-owner-full-control"),
 		Body:   file,
 	})
 	if err != nil {

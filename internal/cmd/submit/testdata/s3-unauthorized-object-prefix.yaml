@@ -32,24 +32,24 @@ interactions:
       X-Amz-Content-Sha256:
       - f3f8d97071a55a395844dda7fcf8d8d5aba75001f198ec8b4e704cae6752b24a
       X-Amz-Date:
-      - 20210531T214648Z
-    url: https://some-bogus-bucket.s3.amazonaws.com/42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
+      - 20210531T214647Z
+    url: https://buildpulse-uploads.s3.amazonaws.com/1/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
     method: PUT
   response:
     body: |-
       <?xml version="1.0" encoding="UTF-8"?>
-      <Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message><BucketName>some-bogus-bucket</BucketName><RequestId>58A71AVNTZZBQJWY</RequestId><HostId>Ie1S/LTzl32U1TevgGUWYBwhlnxLtThyC+qHS9OrpXCqXNyiYwIp2hmlNhpmF1a5Stuxv/FXaX0=</HostId></Error>
+      <Error><Code>AccessDenied</Code><Message>Access Denied</Message><RequestId>34DM9HTQPXSCDVGW</RequestId><HostId>vnkoiC6+iuTvk0AEzv0VuD6j6QvGH2cQJw7qiicBiyDeR2QMxr979hIkQuTsoFZlEjATbNhxyDQ=</HostId></Error>
     headers:
       Content-Type:
       - application/xml
       Date:
-      - Mon, 31 May 2021 21:46:49 GMT
+      - Mon, 31 May 2021 21:46:47 GMT
       Server:
       - AmazonS3
       X-Amz-Id-2:
-      - Ie1S/LTzl32U1TevgGUWYBwhlnxLtThyC+qHS9OrpXCqXNyiYwIp2hmlNhpmF1a5Stuxv/FXaX0=
+      - vnkoiC6+iuTvk0AEzv0VuD6j6QvGH2cQJw7qiicBiyDeR2QMxr979hIkQuTsoFZlEjATbNhxyDQ=
       X-Amz-Request-Id:
-      - 58A71AVNTZZBQJWY
-    status: 404 Not Found
-    code: 404
+      - 34DM9HTQPXSCDVGW
+    status: 403 Forbidden
+    code: 403
     duration: ""

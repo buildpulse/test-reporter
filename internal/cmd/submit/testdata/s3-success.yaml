@@ -26,12 +26,14 @@ interactions:
       Content-Md5:
       - 6gFDgFr83IG+LPcNWlCHvw==
       User-Agent:
-      - aws-sdk-go/1.33.7 (go1.14.4; darwin; amd64) S3Manager
+      - aws-sdk-go/1.38.30 (go1.16.4; darwin; amd64) S3Manager
+      X-Amz-Acl:
+      - bucket-owner-full-control
       X-Amz-Content-Sha256:
       - f3f8d97071a55a395844dda7fcf8d8d5aba75001f198ec8b4e704cae6752b24a
       X-Amz-Date:
-      - 20200719T143258Z
-    url: https://s3.us-east-2.amazonaws.com/42.buildpulse-uploads/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
+      - 20210531T213223Z
+    url: https://buildpulse-uploads.s3.amazonaws.com/42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz
     method: PUT
   response:
     body: ""
@@ -39,17 +41,17 @@ interactions:
       Content-Length:
       - "0"
       Date:
-      - Sun, 19 Jul 2020 14:33:00 GMT
+      - Mon, 31 May 2021 21:32:26 GMT
       Etag:
       - '"ea0143805afcdc81be2cf70d5a5087bf"'
       Server:
       - AmazonS3
-      X-Amz-Expiration:
-      - expiry-date="Tue, 04 Aug 2020 00:00:00 GMT", rule-id="Expire after 15 days"
       X-Amz-Id-2:
-      - PHRKzEDQ0pEBOXfdhKY89gFYMVSqY2WgAf3V+BSu+DklZxdHe6n6RgSD9kK9+RyUCjUi/+0KmL0=
+      - a/xFpXLpCAJ/fJJgNsv3kVpqtAJp9ptsJouY5u5z5MxfBRV/4aszYL/A+wpX6HpRlBRAQbRvweU=
       X-Amz-Request-Id:
-      - C7333E247CD0CD80
+      - FRD66ZCYX88WRRH4
+      X-Amz-Server-Side-Encryption:
+      - AES256
     status: 200 OK
     code: 200
     duration: ""

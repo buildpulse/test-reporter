@@ -43,6 +43,7 @@ func TestSubmit_Init(t *testing.T) {
 		assert.Equal(t, resultsDir, s.path)
 		assert.EqualValues(t, 42, s.accountID)
 		assert.EqualValues(t, 8675309, s.repositoryID)
+		assert.Equal(t, "buildpulse-uploads", s.bucket)
 		assert.Equal(t, "some-access-key-id", s.credentials.AccessKeyID)
 		assert.Equal(t, "some-secret-access-key", s.credentials.SecretAccessKey)
 		assert.Equal(t, exampleEnv, s.envs)
@@ -75,6 +76,24 @@ func TestSubmit_Init(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, resultsDir, s.path)
 		assert.Equal(t, "Static", s.commitResolver.Source())
+	})
+
+	t.Run("WithBuildPulseBucketEnvVar", func(t *testing.T) {
+		repoDir := t.TempDir()
+
+		envs := map[string]string{
+			"BUILDPULSE_ACCESS_KEY_ID":     "some-access-key-id",
+			"BUILDPULSE_SECRET_ACCESS_KEY": "some-secret-access-key",
+			"BUILDPULSE_BUCKET":            "buildpulse-uploads-test",
+		}
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err = s.Init(
+			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
+			envs,
+			new(stubCommitResolverFactory),
+		)
+		assert.NoError(t, err)
+		assert.Equal(t, "buildpulse-uploads-test", s.bucket)
 	})
 }
 
@@ -302,6 +321,7 @@ func TestSubmit_Run(t *testing.T) {
 		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
 		envs:           envs,
 		path:           dir,
+		bucket:         "buildpulse-uploads",
 		accountID:      42,
 		repositoryID:   8675309,
 		credentials: credentials{
@@ -320,13 +340,14 @@ func TestSubmit_Run(t *testing.T) {
 	assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
 	assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
 
-	assert.Equal(t, "8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
+	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
 }
 
 func Test_upload(t *testing.T) {
 	tests := []struct {
 		name            string
 		fixture         string
+		bucket          string
 		accountID       uint64
 		accessKeyID     string
 		secretAccessKey string
@@ -335,6 +356,7 @@ func Test_upload(t *testing.T) {
 		{
 			name:            "success",
 			fixture:         "testdata/s3-success",
+			bucket:          "buildpulse-uploads",
 			accountID:       42,
 			accessKeyID:     accessKeyID,
 			secretAccessKey: secretAccessKey,
@@ -343,6 +365,7 @@ func Test_upload(t *testing.T) {
 		{
 			name:            "bad access key ID",
 			fixture:         "testdata/s3-bad-access-key-id",
+			bucket:          "buildpulse-uploads",
 			accountID:       42,
 			accessKeyID:     "some-bogus-access-key-id",
 			secretAccessKey: secretAccessKey,
@@ -351,15 +374,26 @@ func Test_upload(t *testing.T) {
 		{
 			name:            "bad secret access key",
 			fixture:         "testdata/s3-bad-secret-access-key",
+			bucket:          "buildpulse-uploads",
 			accountID:       42,
 			accessKeyID:     accessKeyID,
 			secretAccessKey: "some-bogus-secret-access-key",
 			err:             "SignatureDoesNotMatch",
 		},
 		{
+			name:            "credentials not authorized for account ID",
+			fixture:         "testdata/s3-unauthorized-object-prefix",
+			bucket:          "buildpulse-uploads",
+			accountID:       1,
+			accessKeyID:     accessKeyID,
+			secretAccessKey: secretAccessKey,
+			err:             "AccessDenied",
+		},
+		{
 			name:            "bad bucket",
 			fixture:         "testdata/s3-bad-bucket",
-			accountID:       1,
+			bucket:          "some-bogus-bucket",
+			accountID:       42,
 			accessKeyID:     accessKeyID,
 			secretAccessKey: secretAccessKey,
 			err:             "NoSuchBucket",
@@ -380,6 +414,7 @@ func Test_upload(t *testing.T) {
 				client:       &http.Client{Transport: r},
 				idgen:        func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
 				logger:       logger.New(),
+				bucket:       tt.bucket,
 				accountID:    tt.accountID,
 				repositoryID: 8675309,
 				credentials: credentials{
@@ -390,7 +425,7 @@ func Test_upload(t *testing.T) {
 			key, err := s.upload("testdata/example-test-results.tar.gz")
 			if tt.err == "" {
 				assert.NoError(t, err)
-				assert.Equal(t, "8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
+				assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
 			} else {
 				assert.Contains(t, err.Error(), tt.err)
 			}
