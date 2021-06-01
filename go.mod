@@ -8,7 +8,7 @@ require (
 	github.com/dnaeon/go-vcr v1.1.0
 	github.com/go-git/go-git/v5 v5.4.1
 	github.com/google/uuid v1.2.0
-	github.com/otiai10/copy v1.5.1
+	github.com/otiai10/copy v1.6.0
 	github.com/stretchr/testify v1.7.0
 	gopkg.in/yaml.v2 v2.4.0
 )
