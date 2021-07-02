@@ -195,6 +195,10 @@ func (g *githubMetadata) Init(envs map[string]string, log logger.Logger) error {
 
 	log.Printf("Using $GITHUB_SHA environment variable as commit SHA: %s", g.GithubSHA)
 
+	if g.GithubServerURL == "" {
+		g.GithubServerURL = "https://github.com"
+	}
+
 	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.GithubRepoNWO)
 
 	g.buildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)

@@ -108,6 +108,46 @@ func Test_circleMetadata_Init_extraFields(t *testing.T) {
 	}
 }
 
+func Test_githubMetadata_Init_repoURL(t *testing.T) {
+	tests := []struct {
+		name string
+		envs map[string]string
+		want string
+	}{
+		{
+			name: "when GITHUB_SERVER_URL is present",
+			envs: map[string]string{
+				"GITHUB_REPOSITORY": "some-owner/some-repo",
+				"GITHUB_SERVER_URL": "https://github.com",
+			},
+			want: "https://github.com/some-owner/some-repo",
+		},
+		{
+			name: "when GITHUB_SERVER_URL is blank",
+			envs: map[string]string{
+				"GITHUB_REPOSITORY": "some-owner/some-repo",
+				"GITHUB_SERVER_URL": "",
+			},
+			want: "https://github.com/some-owner/some-repo",
+		},
+		{
+			name: "when GITHUB_SERVER_URL is missing",
+			envs: map[string]string{
+				"GITHUB_REPOSITORY": "some-owner/some-repo",
+			},
+			want: "https://github.com/some-owner/some-repo",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := githubMetadata{}
+			err := meta.Init(tt.envs, logger.New())
+			assert.NoError(t, err)
+
+			assert.Equal(t, tt.want, meta.GithubRepoURL)
+		})
+	}
+}
 func Test_githubMetadata_Init_refTypes(t *testing.T) {
 	tests := []struct {
 		name string
