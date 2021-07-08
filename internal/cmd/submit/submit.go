@@ -271,11 +271,26 @@ func toTar(dir string) (dest string, err error) {
 	defer writer.Close()
 
 	isIncludable := func(info os.FileInfo) bool {
-		return info.IsDir() ||
-			filepath.Base(info.Name()) == "buildpulse.log" ||
+		return filepath.Base(info.Name()) == "buildpulse.log" ||
 			filepath.Base(info.Name()) == "buildpulse.yml" ||
 			bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml"))
 	}
+
+	writeHeader := func(w io.Writer, info os.FileInfo, path string) error {
+		header, err := tar.FileInfoHeader(info, path)
+		if err != nil {
+			return err
+		}
+
+		header.Name = path
+		if err := writer.WriteHeader(header); err != nil {
+			return err
+		}
+
+		return nil
+	}
+
+	dirsWritten := make(map[string]struct{})
 
 	return tarfile.Name(), filepath.Walk(dir,
 		func(srcpath string, info os.FileInfo, err error) error {
@@ -292,18 +307,26 @@ func toTar(dir string) (dest string, err error) {
 				return err
 			}
 
-			header, err := tar.FileInfoHeader(info, destpath)
+			// Write a header for the directory containing this file (if we haven't already done so)
+			destdir := filepath.Dir(destpath)
+			_, ok := dirsWritten[destdir]
+			if !ok {
+				dirinfo, err := os.Lstat(filepath.Dir(srcpath))
+				if err != nil {
+					return err
+				}
+
+				err = writeHeader(writer, dirinfo, destdir)
+				if err != nil {
+					return err
+				}
+
+				dirsWritten[destdir] = struct{}{}
+			}
+
+			err = writeHeader(writer, info, destpath)
 			if err != nil {
 				return err
-			}
-
-			header.Name = destpath
-			if err := writer.WriteHeader(header); err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
 			}
 
 			file, err := os.Open(srcpath)

@@ -475,9 +475,13 @@ func Test_toTarGz(t *testing.T) {
 		filepath.Join(dir, "junit/browsertest/example-3.xml"),
 	)
 
-	// === Verify tarball excludes files other than buildpulse.yml and XML reports
+	// === Verify tarball excludes irrelevant files
 	assert.FileExists(t, "testdata/example-test-results/junit/browsertest/example-3.txt")
 	assert.NoFileExists(t, filepath.Join(dir, "junit/browsertest/example-3.txt"))
+
+	// === Verify tarball excludes irrelevant directories (i.e., directories that contain no relevant files)
+	assert.DirExists(t, "testdata/example-test-results/dir-without-relevant-files")
+	assert.NoDirExists(t, filepath.Join(dir, "dir-without-relevant-files"))
 }
 
 func unzip(src io.Reader, dest io.Writer) error {
