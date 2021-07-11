@@ -280,7 +280,7 @@ func toTar(dir string) (dest string, err error) {
 		return "", err
 	}
 
-	err = filepath.Walk(dir, func(srcpath string, info os.FileInfo, err error) error {
+	err = filepath.WalkDir(dir, func(srcpath string, _ os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -294,7 +294,6 @@ func toTar(dir string) (dest string, err error) {
 			return err
 		}
 
-		fmt.Println("Writing from/to", srcpath, destpath)
 		err = t.Write(srcpath, destpath)
 		if err != nil {
 			return err
