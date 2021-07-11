@@ -285,7 +285,7 @@ func toTar(dir string) (dest string, err error) {
 			return err
 		}
 
-		if !bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml")) {
+		if !isXML(srcpath) {
 			return nil
 		}
 
@@ -366,4 +366,10 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	}
 
 	return nil
+}
+
+// isXML returns true if the given filename has an XML extension
+// (case-insensitive); false, otherwise.
+func isXML(filename string) bool {
+	return bytes.EqualFold([]byte(filepath.Ext(filename)), []byte(".xml"))
 }
