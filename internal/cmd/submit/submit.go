@@ -1,7 +1,6 @@
 package submit
 
 import (
-	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"flag"
@@ -21,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/buildpulse/test-reporter/internal/metadata"
+	"github.com/buildpulse/test-reporter/internal/tar"
 	"github.com/google/uuid"
 )
 
@@ -261,83 +261,51 @@ func toTarGz(dir string) (dest string, err error) {
 // toTar creates a tarball containing the submittable contents of the named
 // directory (dir) and returns the path of the resulting file.
 func toTar(dir string) (dest string, err error) {
-	tarfile, err := ioutil.TempFile("", "buildpulse-*.tar")
+	f, err := ioutil.TempFile("", "buildpulse-*.tar")
 	if err != nil {
 		return "", err
 	}
-	defer tarfile.Close()
+	defer f.Close()
 
-	writer := tar.NewWriter(tarfile)
-	defer writer.Close()
+	t := tar.Create(f)
+	defer t.Close()
 
-	isIncludable := func(info os.FileInfo) bool {
-		return filepath.Base(info.Name()) == "buildpulse.log" ||
-			filepath.Base(info.Name()) == "buildpulse.yml" ||
-			bytes.EqualFold([]byte(filepath.Ext(info.Name())), []byte(".xml"))
+	err = t.Write(filepath.Join(dir, "buildpulse.yml"), "buildpulse.yml")
+	if err != nil {
+		return "", err
 	}
 
-	writeHeader := func(w io.Writer, info os.FileInfo, path string) error {
-		header, err := tar.FileInfoHeader(info, path)
+	err = t.Write(filepath.Join(dir, "buildpulse.log"), "buildpulse.log")
+	if err != nil {
+		return "", err
+	}
+
+	err = filepath.WalkDir(dir, func(srcpath string, _ os.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		header.Name = path
-		if err := writer.WriteHeader(header); err != nil {
+		if !isXML(srcpath) {
+			return nil
+		}
+
+		destpath, err := filepath.Rel(dir, srcpath)
+		if err != nil {
+			return err
+		}
+
+		err = t.Write(srcpath, destpath)
+		if err != nil {
 			return err
 		}
 
 		return nil
+	})
+	if err != nil {
+		return "", err
 	}
 
-	dirsWritten := make(map[string]struct{})
-
-	return tarfile.Name(), filepath.Walk(dir,
-		func(srcpath string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-
-			if !isIncludable(info) {
-				return nil
-			}
-
-			destpath, err := filepath.Rel(dir, srcpath)
-			if err != nil {
-				return err
-			}
-
-			// Write a header for the directory containing this file (if we haven't already done so)
-			destdir := filepath.Dir(destpath)
-			_, ok := dirsWritten[destdir]
-			if !ok {
-				dirinfo, err := os.Lstat(filepath.Dir(srcpath))
-				if err != nil {
-					return err
-				}
-
-				err = writeHeader(writer, dirinfo, destdir)
-				if err != nil {
-					return err
-				}
-
-				dirsWritten[destdir] = struct{}{}
-			}
-
-			err = writeHeader(writer, info, destpath)
-			if err != nil {
-				return err
-			}
-
-			file, err := os.Open(srcpath)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-
-			_, err = io.Copy(writer, file)
-			return err
-		})
+	return f.Name(), nil
 }
 
 // toGz gzips the named file (src) and returns the path of the resulting file.
@@ -397,4 +365,10 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	}
 
 	return nil
+}
+
+// isXML returns true if the given filename has an XML extension
+// (case-insensitive); false, otherwise.
+func isXML(filename string) bool {
+	return bytes.EqualFold([]byte(filepath.Ext(filename)), []byte(".xml"))
 }

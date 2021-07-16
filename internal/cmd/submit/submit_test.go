@@ -1,11 +1,8 @@
 package submit
 
 import (
-	"archive/tar"
 	"bytes"
-	"compress/gzip"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -18,6 +15,7 @@ import (
 	"github.com/dnaeon/go-vcr/cassette"
 	"github.com/dnaeon/go-vcr/recorder"
 	"github.com/google/uuid"
+	"github.com/mholt/archiver/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -437,24 +435,8 @@ func Test_toTarGz(t *testing.T) {
 	path, err := toTarGz("./testdata/example-test-results")
 	require.NoError(t, err)
 
-	// === Unzip
-	zipfile, err := os.Open(path)
-	require.NoError(t, err)
-	defer zipfile.Close()
-
-	tarfile, err := ioutil.TempFile("", "buildpulse-unzip-")
-	require.NoError(t, err)
-	defer os.Remove(tarfile.Name())
-
-	err = unzip(zipfile, tarfile)
-	require.NoError(t, err)
-
-	// === Untar
-	tarfile, err = os.Open(tarfile.Name())
-	require.NoError(t, err)
-
 	dir := t.TempDir()
-	err = untar(tarfile, dir)
+	err = archiver.Unarchive(path, dir)
 	require.NoError(t, err)
 
 	// === Verify original directory content matches resulting directory content
@@ -482,55 +464,6 @@ func Test_toTarGz(t *testing.T) {
 	// === Verify tarball excludes irrelevant directories (i.e., directories that contain no relevant files)
 	assert.DirExists(t, "testdata/example-test-results/dir-without-relevant-files")
 	assert.NoDirExists(t, filepath.Join(dir, "dir-without-relevant-files"))
-}
-
-func unzip(src io.Reader, dest io.Writer) error {
-	zr, err := gzip.NewReader(src)
-	if err != nil {
-		return err
-	}
-	defer zr.Close()
-
-	_, err = io.Copy(dest, zr)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func untar(src io.Reader, dest string) error {
-	tarReader := tar.NewReader(src)
-
-	for {
-		header, err := tarReader.Next()
-		if err == io.EOF {
-			break
-		} else if err != nil {
-			return err
-		}
-
-		path := filepath.Join(dest, header.Name)
-		info := header.FileInfo()
-		if info.IsDir() {
-			if err = os.MkdirAll(path, info.Mode()); err != nil {
-				return err
-			}
-			continue
-		}
-
-		file, err := os.OpenFile(path, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, info.Mode())
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-		_, err = io.Copy(file, tarReader)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // assertEqualContent asserts that two files have the same content.
