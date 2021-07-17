@@ -37,7 +37,7 @@ func TestSubmit_Init(t *testing.T) {
 	t.Run("MinimumRequiredArgs", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
 		err = s.Init([]string{resultsDir, "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, new(stubCommitResolverFactory))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, resultsDir, s.path)
 		assert.EqualValues(t, 42, s.accountID)
 		assert.EqualValues(t, 8675309, s.repositoryID)
@@ -58,7 +58,7 @@ func TestSubmit_Init(t *testing.T) {
 			exampleEnv,
 			new(stubCommitResolverFactory),
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, resultsDir, s.path)
 		assert.Equal(t, repoDir, s.repositoryPath)
 		assert.Equal(t, "Repository", s.commitResolver.Source())
@@ -71,7 +71,7 @@ func TestSubmit_Init(t *testing.T) {
 			exampleEnv,
 			new(stubCommitResolverFactory),
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, resultsDir, s.path)
 		assert.Equal(t, "Static", s.commitResolver.Source())
 	})
@@ -90,7 +90,7 @@ func TestSubmit_Init(t *testing.T) {
 			envs,
 			new(stubCommitResolverFactory),
 		)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, "buildpulse-uploads-test", s.bucket)
 	})
 }
