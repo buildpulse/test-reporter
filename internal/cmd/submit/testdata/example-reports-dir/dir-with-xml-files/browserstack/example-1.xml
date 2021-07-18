@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="example-1" timestamp="2020-07-11T01:37:27" time="0.001" tests="1" failures="0" errors="0" skipped="0">
+    <testcase classname="example-1-classname" name="example-1-testname" time="0"/>
+  </testsuite>
+</testsuites>

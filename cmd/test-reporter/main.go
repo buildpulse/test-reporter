@@ -22,7 +22,7 @@ var usage = strings.ReplaceAll(`
 CLI to submit test results to BuildPulse
 
 USAGE
-	$ %s submit TEST_RESULTS_DIR --account-id=ACCOUNT_ID --repository-id=REPOSITORY_ID
+	$ %s submit TEST_RESULTS_PATH --account-id=ACCOUNT_ID --repository-id=REPOSITORY_ID
 
 FLAGS
   --account-id      (required) BuildPulse account ID for the account that owns the repository
@@ -38,7 +38,7 @@ ENVIRONMENT VARIABLES
 	BUILDPULSE_SECRET_ACCESS_KEY  BuildPulse secret access key for the account that owns the repository
 
 EXAMPLE
-	$ %s submit test/reports --account-id 42 --repository-id 8675309
+	$ %s submit test/reports/*.xml --account-id 42 --repository-id 8675309
 `, "\t", "  ")
 
 func main() {

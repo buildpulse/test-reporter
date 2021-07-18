@@ -31,14 +31,11 @@ const (
 )
 
 func TestSubmit_Init(t *testing.T) {
-	resultsDir, err := os.Getwd()
-	require.NoError(t, err)
-
 	t.Run("MinimumRequiredArgs", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init([]string{resultsDir, "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, new(stubCommitResolverFactory))
+		err := s.Init([]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, new(stubCommitResolverFactory))
 		require.NoError(t, err)
-		assert.Equal(t, resultsDir, s.path)
+		assert.ElementsMatch(t, []string{"testdata/example-reports-dir/example-1.xml"}, s.paths)
 		assert.EqualValues(t, 42, s.accountID)
 		assert.EqualValues(t, 8675309, s.repositoryID)
 		assert.Equal(t, "buildpulse-uploads", s.bucket)
@@ -49,30 +46,79 @@ func TestSubmit_Init(t *testing.T) {
 		assert.Equal(t, "Repository", s.commitResolver.Source())
 	})
 
-	t.Run("WithRepositoryDirArg", func(t *testing.T) {
-		repoDir := t.TempDir()
-
+	t.Run("WithMultiplePathArgs", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init(
-			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/example-1.xml", "testdata/example-reports-dir/example-2.XML", "--account-id", "42", "--repository-id", "8675309"},
 			exampleEnv,
 			new(stubCommitResolverFactory),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, resultsDir, s.path)
+		assert.ElementsMatch(t, []string{"testdata/example-reports-dir/example-1.xml", "testdata/example-reports-dir/example-2.XML"}, s.paths)
+		assert.EqualValues(t, 42, s.accountID)
+		assert.EqualValues(t, 8675309, s.repositoryID)
+	})
+
+	t.Run("WithDirectoryWithReportsAsPathArg", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/dir-with-xml-files/browserstack", "--account-id", "42", "--repository-id", "8675309"},
+			exampleEnv,
+			new(stubCommitResolverFactory),
+		)
+		require.NoError(t, err)
+		assert.ElementsMatch(t,
+			[]string{
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-1.xml",
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-2.xml",
+			},
+			s.paths,
+		)
+		assert.EqualValues(t, 42, s.accountID)
+		assert.EqualValues(t, 8675309, s.repositoryID)
+	})
+
+	// To maintain backwards compatibility with releases prior to v0.19.0, if
+	// exactly one path is given, and it's a directory, and it contains no XML
+	// reports, then continue without erroring. The resulting upload will contain
+	// *zero* XML reports.
+	//
+	// TODO: Treat this scenario as an error for the next major version release.
+	t.Run("WithDirectoryWithoutReportsAsPathArg", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/dir-without-xml-files", "--account-id", "42", "--repository-id", "8675309"},
+			exampleEnv,
+			new(stubCommitResolverFactory),
+		)
+		require.NoError(t, err)
+		assert.Empty(t, s.paths)
+		assert.EqualValues(t, 42, s.accountID)
+		assert.EqualValues(t, 8675309, s.repositoryID)
+	})
+
+	t.Run("WithRepositoryDirArg", func(t *testing.T) {
+		repoDir := t.TempDir()
+
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
+			exampleEnv,
+			new(stubCommitResolverFactory),
+		)
+		require.NoError(t, err)
 		assert.Equal(t, repoDir, s.repositoryPath)
 		assert.Equal(t, "Repository", s.commitResolver.Source())
 	})
 
 	t.Run("WithTreeArg", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init(
-			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--tree", "0000000000000000000000000000000000000000"},
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309", "--tree", "0000000000000000000000000000000000000000"},
 			exampleEnv,
 			new(stubCommitResolverFactory),
 		)
 		require.NoError(t, err)
-		assert.Equal(t, resultsDir, s.path)
 		assert.Equal(t, "Static", s.commitResolver.Source())
 	})
 
@@ -85,8 +131,8 @@ func TestSubmit_Init(t *testing.T) {
 			"BUILDPULSE_BUCKET":            "buildpulse-uploads-test",
 		}
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init(
-			[]string{resultsDir, "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
+		err := s.Init(
+			[]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309", "--repository-dir", repoDir},
 			envs,
 			new(stubCommitResolverFactory),
 		)
@@ -112,7 +158,7 @@ func TestSubmit_Init_invalidArgs(t *testing.T) {
 		{
 			name:   "FlagsWithNoPath",
 			args:   "--account-id 1 --repository-id 2",
-			errMsg: "missing TEST_RESULTS_DIR",
+			errMsg: "missing TEST_RESULTS_PATH",
 		},
 		{
 			name:   "MissingAccountID",
@@ -219,7 +265,7 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 	}
 }
 
-func TestSubmit_Init_invalidPath(t *testing.T) {
+func TestSubmit_Init_invalidPaths(t *testing.T) {
 	t.Run("NonexistentPath", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init([]string{
@@ -231,18 +277,15 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 			&stubCommitResolverFactory{},
 		)
 		if assert.Error(t, err) {
-			assert.Equal(t, "path is not a directory: some-nonexistent-path", err.Error())
+			assert.Equal(t, "no XML reports found at TEST_RESULTS_PATH: some-nonexistent-path", err.Error())
 		}
 	})
 
-	t.Run("NonDirectoryPath", func(t *testing.T) {
-		tmpfile, err := ioutil.TempFile("", "buildpulse-cli-test-fixture")
-		require.NoError(t, err)
-		defer os.Remove(tmpfile.Name())
-
+	t.Run("MultiplePathsWithNoReportFiles", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init([]string{
-			tmpfile.Name(),
+		err := s.Init([]string{
+			"testdata/example-reports-dir/dir-without-xml-files",
+			"testdata/example-reports-dir/example.txt",
 			"--account-id", "42",
 			"--repository-id", "8675309",
 		},
@@ -250,7 +293,30 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 			&stubCommitResolverFactory{},
 		)
 		if assert.Error(t, err) {
-			assert.Regexp(t, "path is not a directory: ", err.Error())
+			assert.Equal(t, "no XML reports found at TEST_RESULTS_PATH: testdata/example-reports-dir/dir-without-xml-files testdata/example-reports-dir/example.txt", err.Error())
+		}
+	})
+
+	t.Run("GlobPathMatchingNoReportFiles", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init([]string{"testdata/example-reports-dir/bogus*", "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, &stubCommitResolverFactory{})
+		if assert.Error(t, err) {
+			assert.Equal(t, "no XML reports found at TEST_RESULTS_PATH: testdata/example-reports-dir/bogus*", err.Error())
+		}
+	})
+
+	t.Run("BadGlobPattern", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init([]string{
+			"[",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+		},
+			exampleEnv,
+			&stubCommitResolverFactory{},
+		)
+		if assert.Error(t, err) {
+			assert.Equal(t, `invalid value "[" for path: syntax error in pattern`, err.Error())
 		}
 	})
 }
@@ -311,8 +377,6 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 }
 
 func TestSubmit_Run(t *testing.T) {
-	dir := t.TempDir()
-
 	r, err := recorder.New("testdata/s3-success")
 	require.NoError(t, err)
 	defer func() {
@@ -332,7 +396,7 @@ func TestSubmit_Run(t *testing.T) {
 		version:        &metadata.Version{Number: "v1.2.3"},
 		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
 		envs:           envs,
-		path:           dir,
+		paths:          []string{"testdata/example-reports-dir/example-1.xml"},
 		bucket:         "buildpulse-uploads",
 		accountID:      42,
 		repositoryID:   8675309,
@@ -344,15 +408,52 @@ func TestSubmit_Run(t *testing.T) {
 
 	key, err := s.Run()
 	require.NoError(t, err)
+	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
+}
 
-	yaml, err := ioutil.ReadFile(filepath.Join(dir, "buildpulse.yml"))
+func Test_bundle(t *testing.T) {
+	envs := map[string]string{
+		"GITHUB_ACTIONS": "true",
+		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+	}
+
+	log := logger.New()
+	s := &Submit{
+		logger:         log,
+		version:        &metadata.Version{Number: "v1.2.3"},
+		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+		envs:           envs,
+		paths:          []string{"testdata/example-reports-dir/example-1.xml"},
+		bucket:         "buildpulse-uploads",
+		accountID:      42,
+		repositoryID:   8675309,
+	}
+
+	path, err := s.bundle()
+	require.NoError(t, err)
+
+	unzipDir := t.TempDir()
+	err = archiver.Unarchive(path, unzipDir)
+	require.NoError(t, err)
+
+	// Verify buildpulse.yml is present and contains expected content
+	yaml, err := ioutil.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(yaml), ":ci_provider: github-actions")
 	assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
 	assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
 	assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
 
-	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
+	// Verify test report XML file is present and contains expected content
+	assertEqualContent(t,
+		"testdata/example-reports-dir/example-1.xml",
+		filepath.Join(unzipDir, "testdata/example-reports-dir/example-1.xml"),
+	)
+
+	// Verify buildpulse.log is present and contains expected content
+	logdata, err := ioutil.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
+	require.NoError(t, err)
+	assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
 }
 
 func Test_upload(t *testing.T) {
@@ -445,39 +546,92 @@ func Test_upload(t *testing.T) {
 	}
 }
 
-func Test_toTarGz(t *testing.T) {
-	path, err := toTarGz("./testdata/example-test-results")
+func Test_toGz(t *testing.T) {
+	path, err := toGz("testdata/example-reports-dir/example.txt")
 	require.NoError(t, err)
+	assert.Regexp(t, `\.gz$`, path)
 
 	dir := t.TempDir()
-	err = archiver.Unarchive(path, dir)
+	unzippedPath := filepath.Join(dir, "example.txt")
+	err = archiver.DecompressFile(path, unzippedPath)
 	require.NoError(t, err)
 
-	// === Verify original directory content matches resulting directory content
-	assertEqualContent(t,
-		"testdata/example-test-results/buildpulse.yml",
-		filepath.Join(dir, "buildpulse.yml"),
-	)
-	assertEqualContent(t,
-		"testdata/example-test-results/junit/browserstack/example-1.xml",
-		filepath.Join(dir, "junit/browserstack/example-1.xml"),
-	)
-	assertEqualContent(t,
-		"testdata/example-test-results/junit/browserstack/example-2.XML",
-		filepath.Join(dir, "junit/browserstack/example-2.XML"),
-	)
-	assertEqualContent(t,
-		"testdata/example-test-results/junit/browsertest/example-3.xml",
-		filepath.Join(dir, "junit/browsertest/example-3.xml"),
-	)
+	// === Verify original content matches resulting content
+	assertEqualContent(t, "testdata/example-reports-dir/example.txt", unzippedPath)
+}
 
-	// === Verify tarball excludes irrelevant files
-	assert.FileExists(t, "testdata/example-test-results/junit/browsertest/example-3.txt")
-	assert.NoFileExists(t, filepath.Join(dir, "junit/browsertest/example-3.txt"))
+func Test_xmlPathsFromDir(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want []string
+	}{
+		{
+			name: "DirectoryWithFilesAtRootAndInSubDirectories",
+			path: "testdata/example-reports-dir",
+			want: []string{
+				"testdata/example-reports-dir/example-1.xml",
+				"testdata/example-reports-dir/example-2.XML",
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-1.xml",
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-2.xml",
+				"testdata/example-reports-dir/dir-with-xml-files/browsertest/example-3.xml",
+			},
+		},
+		{
+			name: "DirectoryWithoutXMLFiles",
+			path: "testdata/example-reports-dir/dir-without-xml-files",
+			want: []string{},
+		},
+	}
 
-	// === Verify tarball excludes irrelevant directories (i.e., directories that contain no relevant files)
-	assert.DirExists(t, "testdata/example-test-results/dir-without-relevant-files")
-	assert.NoDirExists(t, filepath.Join(dir, "dir-without-relevant-files"))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reportPaths, err := xmlPathsFromDir(tt.path)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tt.want, reportPaths)
+		})
+	}
+}
+
+func Test_xmlPathsFromGlob(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want []string
+	}{
+		{
+			name: "ExactPathToSingleFile",
+			path: "testdata/example-reports-dir/example-1.xml",
+			want: []string{
+				"testdata/example-reports-dir/example-1.xml",
+			},
+		},
+		{
+			name: "PathMatchingFilesByWildcard",
+			path: "testdata/example-reports-dir/example*",
+			want: []string{
+				"testdata/example-reports-dir/example-1.xml",
+				"testdata/example-reports-dir/example-2.XML",
+			},
+		},
+		{
+			name: "PathMatchingDirectoriesAndFilesByWildcard",
+			path: "testdata/example-reports-dir/dir-with-xml-files/*/*.xml",
+			want: []string{
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-1.xml",
+				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-2.xml",
+				"testdata/example-reports-dir/dir-with-xml-files/browsertest/example-3.xml",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reportPaths, err := xmlPathsFromGlob(tt.path)
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tt.want, reportPaths)
+		})
+	}
 }
 
 // assertEqualContent asserts that two files have the same content.

@@ -68,7 +68,7 @@ type Submit struct {
 	version *metadata.Version
 
 	envs           map[string]string
-	path           string
+	paths          []string
 	bucket         string
 	accountID      uint64
 	repositoryID   uint64
@@ -111,20 +111,30 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 	}
 	s.logger.Printf("Using working directory: %v", dir)
 
-	s.path = args[0]
-	isFlag, err := regexp.MatchString("^-", s.path)
+	pathArgs, flagArgs := pathsAndFlagsFromArgs(args)
+	if len(pathArgs) == 0 {
+		return fmt.Errorf("missing TEST_RESULTS_PATH")
+	}
+
+	s.paths, err = xmlPathsFromArgs(pathArgs)
 	if err != nil {
 		return err
 	}
-	if isFlag {
-		return fmt.Errorf("missing TEST_RESULTS_DIR")
-	}
-	info, err := os.Stat(s.path)
-	if err != nil || !info.IsDir() {
-		return fmt.Errorf("path is not a directory: %s", s.path)
+	if len(s.paths) == 0 {
+		// To maintain backwards compatibility with releases prior to v0.19.0, if
+		// exactly one path was given, and it's a directory, and it contains no XML
+		// reports, continue without erroring. The resulting upload will contain
+		// *zero* XML reports. In all other scenarios, treat this as an error.
+		//
+		// TODO: Treat this scenario as an error for the next major version release.
+		info, err := os.Stat(pathArgs[0])
+		isSingleDir := len(pathArgs) == 1 && err == nil && info.IsDir()
+		if !isSingleDir {
+			return fmt.Errorf("no XML reports found at TEST_RESULTS_PATH: %s", strings.Join(pathArgs, " "))
+		}
 	}
 
-	if err := s.fs.Parse(args[1:]); err != nil {
+	if err := s.fs.Parse(flagArgs); err != nil {
 		return err
 	}
 
@@ -165,7 +175,7 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 		return fmt.Errorf("invalid value \"%s\" for flag -tree: should be a 40-character SHA-1 hash", s.tree)
 	}
 
-	info, err = os.Stat(s.repositoryPath)
+	info, err := os.Stat(s.repositoryPath)
 	if err != nil || !info.IsDir() {
 		return fmt.Errorf("invalid value for flag -repository-dir: %s is not a directory", s.repositoryPath)
 	}
@@ -195,44 +205,110 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 // Run packages up the test results and sends them to BuildPulse. It returns the
 // key that uniquely identifies the uploaded object.
 func (s *Submit) Run() (string, error) {
-	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.logger)
+	tarpath, err := s.bundle()
 	if err != nil {
 		return "", err
 	}
 
-	yamlpath := filepath.Join(s.path, "buildpulse.yml")
-	s.logger.Printf("Writing metadata to %s", yamlpath)
-	yaml, err := meta.MarshalYAML()
-	if err != nil {
-		return "", err
-	}
-	err = ioutil.WriteFile(yamlpath, yaml, 0644)
+	s.logger.Printf("Gzipping tarball (%s)", tarpath)
+	zippath, err := toGz(tarpath)
 	if err != nil {
 		return "", err
 	}
 
-	logpath := filepath.Join(s.path, "buildpulse.log")
-	s.logger.Printf("Flushing log to %s", logpath)
-	err = ioutil.WriteFile(logpath, []byte(s.logger.Text()), 0644)
-	if err != nil {
-		return "", err
-	}
-
-	s.logger.Printf("Preparing gzipped archive of test results and metadata at %s", s.path)
-	path, err := toTarGz(s.path)
-	if err != nil {
-		return "", err
-	}
-	s.logger.Printf("Gzipped archive written to %s", path)
-
-	s.logger.Printf("Sending %s to BuildPulse", path)
-	key, err := s.upload(path)
+	s.logger.Printf("Sending %s to BuildPulse", zippath)
+	key, err := s.upload(zippath)
 	if err != nil {
 		return "", err
 	}
 	s.logger.Printf("Delivered test results to BuildPulse (%s)", key)
 
 	return key, nil
+}
+
+// bundle gathers the artifacts expected by BuildPulse, creates a tarball
+// containing those artifacts, and returns the path of the resulting file.
+func (s *Submit) bundle() (string, error) {
+	// Prepare the metadata file
+	//////////////////////////////////////////////////////////////////////////////
+
+	s.logger.Printf("Gathering metadata to describe the build")
+	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.logger)
+	if err != nil {
+		return "", err
+	}
+	yaml, err := meta.MarshalYAML()
+	if err != nil {
+		return "", err
+	}
+
+	yamlfile, err := ioutil.TempFile("", "buildpulse-*.yml")
+	if err != nil {
+		return "", err
+	}
+	defer yamlfile.Close()
+
+	s.logger.Printf("Writing metadata to %s", yamlfile.Name())
+	_, err = yamlfile.Write(yaml)
+	if err != nil {
+		return "", err
+	}
+
+	// Initialize the tarfile for writing
+	//////////////////////////////////////////////////////////////////////////////
+
+	f, err := ioutil.TempFile("", "buildpulse-*.tar")
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	t := tar.Create(f)
+	defer t.Close()
+
+	// Write the XML reports to the tarfile
+	//////////////////////////////////////////////////////////////////////////////
+
+	s.logger.Printf("Preparing tarball of test results:")
+	for _, p := range s.paths {
+		s.logger.Printf("- %s", p)
+		err = t.Write(p, p)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	// Write the metadata file to the tarfile
+	//////////////////////////////////////////////////////////////////////////////
+
+	s.logger.Printf("Adding buildpulse.yml to tarball")
+	err = t.Write(yamlfile.Name(), "buildpulse.yml")
+	if err != nil {
+		return "", err
+	}
+
+	// Write the log to the tarfile
+	//////////////////////////////////////////////////////////////////////////////
+
+	logfile, err := ioutil.TempFile("", "buildpulse-*.log")
+	if err != nil {
+		return "", err
+	}
+	defer logfile.Close()
+
+	s.logger.Printf("Flushing log to %s", logfile.Name())
+	_, err = logfile.Write([]byte(s.logger.Text()))
+	if err != nil {
+		return "", err
+	}
+
+	s.logger.Printf("Adding buildpulse.log to tarball")
+	err = t.Write(logfile.Name(), "buildpulse.log")
+	if err != nil {
+		return "", err
+	}
+
+	return f.Name(), nil
 }
 
 // upload transmits the file at the given path to S3
@@ -247,67 +323,6 @@ func (s *Submit) upload(path string) (string, error) {
 	return key, nil
 }
 
-// toTarGz creates a gzipped tarball containing the contents of the named
-// directory (dir) and returns the path of the resulting file.
-func toTarGz(dir string) (dest string, err error) {
-	tarPath, err := toTar(dir)
-	if err != nil {
-		return "", err
-	}
-
-	return toGz(tarPath)
-}
-
-// toTar creates a tarball containing the submittable contents of the named
-// directory (dir) and returns the path of the resulting file.
-func toTar(dir string) (dest string, err error) {
-	f, err := ioutil.TempFile("", "buildpulse-*.tar")
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-
-	t := tar.Create(f)
-	defer t.Close()
-
-	err = t.Write(filepath.Join(dir, "buildpulse.yml"), "buildpulse.yml")
-	if err != nil {
-		return "", err
-	}
-
-	err = t.Write(filepath.Join(dir, "buildpulse.log"), "buildpulse.log")
-	if err != nil {
-		return "", err
-	}
-
-	err = filepath.WalkDir(dir, func(srcpath string, _ os.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if !isXML(srcpath) {
-			return nil
-		}
-
-		destpath, err := filepath.Rel(dir, srcpath)
-		if err != nil {
-			return err
-		}
-
-		err = t.Write(srcpath, destpath)
-		if err != nil {
-			return err
-		}
-
-		return nil
-	})
-	if err != nil {
-		return "", err
-	}
-
-	return f.Name(), nil
-}
-
 // toGz gzips the named file (src) and returns the path of the resulting file.
 func toGz(src string) (dest string, err error) {
 	reader, err := os.Open(src)
@@ -315,7 +330,7 @@ func toGz(src string) (dest string, err error) {
 		return "", err
 	}
 
-	zipfile, err := ioutil.TempFile("", "buildpulse-*.tar.gz")
+	zipfile, err := ioutil.TempFile("", "buildpulse-*.gz")
 	if err != nil {
 		return "", err
 	}
@@ -365,6 +380,92 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	}
 
 	return nil
+}
+
+// flagRegex matches args that are flags.
+var flagRegex = regexp.MustCompile("^-")
+
+// pathsAndFlagsFromArgs returns a slice containing the subset of args that
+// represent paths and a slice containing the subset of args that represent
+// flags.
+func pathsAndFlagsFromArgs(args []string) ([]string, []string) {
+	for i, v := range args {
+		isFlag := flagRegex.MatchString(v)
+
+		if isFlag {
+			paths := args[0:i]
+			flags := args[i:]
+			return paths, flags
+		}
+	}
+
+	return args, []string{}
+}
+
+// xmlPathsFromArgs translates each path in args into a list of XML files present
+// at that path. It returns the resulting list of XML file paths.
+func xmlPathsFromArgs(args []string) ([]string, error) {
+	var paths []string
+
+	for _, arg := range args {
+		info, err := os.Stat(arg)
+		if err == nil && info.IsDir() {
+			xmls, err := xmlPathsFromDir(arg)
+			if err != nil {
+				return nil, err
+			}
+			paths = append(paths, xmls...)
+		} else {
+			xmls, err := xmlPathsFromGlob(arg)
+			if err != nil {
+				return nil, fmt.Errorf("invalid value \"%s\" for path: %v", arg, err)
+			}
+			paths = append(paths, xmls...)
+		}
+	}
+
+	return paths, nil
+}
+
+// xmlPathsFromDir returns a list of all the XML files in the given directory
+// and its subdirectories.
+func xmlPathsFromDir(dir string) ([]string, error) {
+	var paths []string
+
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if isXML(info.Name()) {
+			paths = append(paths, path)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, nil
+}
+
+// xmlPathsFromGlob returns a list of all the XML files that match the given
+// glob pattern.
+func xmlPathsFromGlob(pattern string) ([]string, error) {
+	candidates, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, err
+	}
+
+	var paths []string
+	for _, p := range candidates {
+		if isXML(p) {
+			paths = append(paths, p)
+		}
+	}
+
+	return paths, nil
 }
 
 // isXML returns true if the given filename has an XML extension

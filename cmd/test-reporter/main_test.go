@@ -74,9 +74,9 @@ func TestCLI(t *testing.T) {
 		},
 		{
 			name:   "submit subcommand with invalid args",
-			args:   fmt.Sprintf("submit %s --account-id bogus --repository-id 8675309", dir),
+			args:   "submit some-non-existent-path",
 			errMsg: "exit status 1",
-			out:    `invalid value "bogus" for flag -account-id`,
+			out:    `no XML reports found at TEST_RESULTS_PATH`,
 		},
 		{
 			name:   "unsupported subcommand",
