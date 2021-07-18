@@ -222,7 +222,14 @@ func TestSubmit_Init_invalidEnv(t *testing.T) {
 func TestSubmit_Init_invalidPath(t *testing.T) {
 	t.Run("NonexistentPath", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err := s.Init([]string{"some-nonexistent-path", "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, &stubCommitResolverFactory{})
+		err := s.Init([]string{
+			"some-nonexistent-path",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+		},
+			exampleEnv,
+			&stubCommitResolverFactory{},
+		)
 		if assert.Error(t, err) {
 			assert.Equal(t, "path is not a directory: some-nonexistent-path", err.Error())
 		}
@@ -234,7 +241,14 @@ func TestSubmit_Init_invalidPath(t *testing.T) {
 		defer os.Remove(tmpfile.Name())
 
 		s := NewSubmit(&metadata.Version{}, logger.New())
-		err = s.Init([]string{tmpfile.Name(), "--account-id", "42", "--repository-id", "8675309"}, exampleEnv, &stubCommitResolverFactory{})
+		err = s.Init([]string{
+			tmpfile.Name(),
+			"--account-id", "42",
+			"--repository-id", "8675309",
+		},
+			exampleEnv,
+			&stubCommitResolverFactory{},
+		)
 		if assert.Error(t, err) {
 			assert.Regexp(t, "path is not a directory: ", err.Error())
 		}
