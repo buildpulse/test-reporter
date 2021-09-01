@@ -3,7 +3,7 @@ module github.com/buildpulse/test-reporter
 go 1.16
 
 require (
-	github.com/aws/aws-sdk-go v1.40.12
+	github.com/aws/aws-sdk-go v1.40.34
 	github.com/caarlos0/env/v6 v6.3.1-0.20200712182401-52290f9d615e
 	github.com/dnaeon/go-vcr v1.2.0
 	github.com/go-git/go-git/v5 v5.4.2
