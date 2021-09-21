@@ -126,7 +126,7 @@ jobs:
         with:
           name: dist
           path: dist/
-          retention-days: 1
+          retention-days: 90
 
   # TODO: Once it's possible to access draft releases with gh and secrets.GITHUB_TOKEN (https://github.com/cli/cli/issues/3037), update this to download the artifact directly from the release for an extra bit of verification
   verify-alpine:
