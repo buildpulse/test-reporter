@@ -21,8 +21,12 @@ builds:
 snapshot:
   name_template: "SNAPSHOT-{{.ShortCommit}}"
 archives:
-  - format: binary
+  - id: default
+    format: binary
     name_template: "{{ .Binary }}-{{ .Os }}-{{ .Arch }}"
+  - id: snake_case # Also offer binaries with snake_case filenames to support the updated URLs implemented in response to the 2021-09-20 GitHub incident (https://twitter.com/BuildPulseApp/status/1440089498566623241)
+    format: binary
+    name_template: "test_reporter_{{ .Os }}_{{ .Arch }}"
 checksum:
   name_template: "checksums.txt"
 release:
