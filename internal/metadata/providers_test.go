@@ -148,25 +148,51 @@ func Test_githubMetadata_Init_repoURL(t *testing.T) {
 		})
 	}
 }
-func Test_githubMetadata_Init_refTypes(t *testing.T) {
+func Test_githubMetadata_Init_branchIdentification(t *testing.T) {
 	tests := []struct {
 		name string
 		envs map[string]string
 		want string
 	}{
 		{
-			name: "branch",
+			name: "push event for branch",
 			envs: map[string]string{
-				"GITHUB_REF": "refs/heads/some-branch",
+				"GITHUB_BASE_REF":   "",
+				"GITHUB_EVENT_NAME": "push",
+				"GITHUB_HEAD_REF":   "",
+				"GITHUB_REF":        "refs/heads/some-branch",
 			},
 			want: "some-branch",
 		},
 		{
-			name: "tag",
+			name: "push event for tag",
 			envs: map[string]string{
-				"GITHUB_REF": "refs/tags/v0.1.0",
+				"GITHUB_BASE_REF":   "",
+				"GITHUB_EVENT_NAME": "push",
+				"GITHUB_HEAD_REF":   "",
+				"GITHUB_REF":        "refs/tags/v0.1.0",
 			},
 			want: "",
+		},
+		{
+			name: "pull request event for branch from source repo ",
+			envs: map[string]string{
+				"GITHUB_BASE_REF":   "main",
+				"GITHUB_EVENT_NAME": "pull_request",
+				"GITHUB_HEAD_REF":   "some-branch",
+				"GITHUB_REF":        "refs/pull/2/merge",
+			},
+			want: "some-branch",
+		},
+		{
+			name: "pull request event for branch from fork",
+			envs: map[string]string{
+				"GITHUB_BASE_REF":   "main",
+				"GITHUB_EVENT_NAME": "pull_request",
+				"GITHUB_HEAD_REF":   "some-branch",
+				"GITHUB_REF":        "refs/pull/3/merge",
+			},
+			want: "some-branch",
 		},
 		{
 			name: "neither a branch nor a tag",

@@ -203,11 +203,15 @@ func (g *githubMetadata) Init(envs map[string]string, log logger.Logger) error {
 
 	g.buildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
 
+	isPullRequest := g.GithubEventName == "pull_request"
 	isBranch, err := regexp.MatchString("^refs/heads/", g.GithubRef)
 	if err != nil {
 		return err
 	}
-	if isBranch {
+
+	if isPullRequest {
+		g.branch = g.GithubHeadRef
+	} else if isBranch {
 		g.branch = strings.TrimPrefix(g.GithubRef, "refs/heads/")
 	}
 
