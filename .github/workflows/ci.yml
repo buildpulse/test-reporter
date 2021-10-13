@@ -81,7 +81,7 @@ jobs:
       uses: actions/checkout@v2
 
     - name: Build executable binaries
-      run: ./script/build-snapshot
+      run: ./script/build-snapshot --single-target
 
     - name: Output version from binary
       run: ./dist/test_reporter_linux_amd64/test-reporter --version

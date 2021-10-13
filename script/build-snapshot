@@ -12,6 +12,6 @@ fi
 
 cd "$(dirname "$0")/.."
 
-goreleaser --snapshot --skip-publish --rm-dist
+goreleaser build --snapshot --rm-dist $1
 
 echo "✅ See binaries in ./dist"
