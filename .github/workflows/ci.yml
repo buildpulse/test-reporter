@@ -119,7 +119,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          version: v0.181.1 # Pin to this version until the issue with the renamed assets is resolved: https://github.com/goreleaser/goreleaser/issues/2575
+          version: latest
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
