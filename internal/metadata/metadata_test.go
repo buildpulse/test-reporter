@@ -145,6 +145,21 @@ func TestNewMetadata(t *testing.T) {
 			},
 			fixture: "./testdata/travis.yml",
 		},
+		{
+			name: "webapp.io",
+			envs: map[string]string{
+				"GIT_BRANCH":        "some-branch",
+				"GIT_COMMIT":        "1f192ff735f887dd7a25229b2ece0422d17931f5",
+				"JOB_ID":            "42",
+				"ORGANIZATION_NAME": "some-org",
+				"REPOSITORY_NAME":   "some-repo",
+				"REPOSITORY_OWNER":  "some-owner",
+				"RETRY_INDEX":       "1",
+				"RUNNER_ID":         "main-layerfile",
+				"WEBAPPIO":          "true",
+			},
+			fixture: "./testdata/webapp.io.yml",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

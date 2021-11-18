@@ -262,6 +262,37 @@ func Test_travisMetadata_Init_extraFields(t *testing.T) {
 	}
 }
 
+func Test_webappioMetadata_Init_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "with pull request",
+			envs: map[string]string{
+				"PULL_REQUEST_URL": "https://github.com/some-owner/some-repo/pull/1",
+			},
+			expectedLines: []string{
+				":pull_request_url: https://github.com/some-owner/some-repo/pull/1",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := webappioMetadata{}
+			err := meta.Init(tt.envs, logger.New())
+			assert.NoError(t, err)
+
+			yaml, err := yaml.Marshal(meta)
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
+		})
+	}
+}
+
 func Test_nameWithOwnerFromGitURL(t *testing.T) {
 	tests := []struct {
 		name string
