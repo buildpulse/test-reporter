@@ -37,8 +37,10 @@ func newProviderMetadata(envs map[string]string, log logger.Logger) (providerMet
 		pm = &semaphoreMetadata{}
 	case envs["TRAVIS"] == "true":
 		pm = &travisMetadata{}
+	case envs["WEBAPPIO"] == "true":
+		pm = &webappioMetadata{}
 	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, or Travis CI)")
+		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, Travis CI, or webapp.io)")
 	}
 	log.Printf("Detected build environment: %s", pm.Name())
 
@@ -426,4 +428,56 @@ func nameWithOwnerFromGitURL(url string) (string, error) {
 	}
 
 	return strings.TrimSuffix(matches[1], ".git"), nil
+}
+
+var _ providerMetadata = (*webappioMetadata)(nil)
+
+type webappioMetadata struct {
+	// Fields derived from webapp.io-specific environment variables
+	GitBranch        string `env:"GIT_BRANCH" yaml:"-"`
+	GitCommit        string `env:"GIT_COMMIT" yaml:"-"`
+	JobID            uint   `env:"JOB_ID" yaml:"-"`
+	PullRequestURL   string `env:"PULL_REQUEST_URL" yaml:":pull_request_url,omitempty"`
+	OrganizationName string `env:"ORGANIZATION_NAME" yaml:"-"`
+	RepositoryName   string `env:"REPOSITORY_NAME" yaml:"-"`
+	RepositoryOwner  string `env:"REPOSITORY_OWNER" yaml:"-"`
+	RetryIndex       uint   `env:"RETRY_INDEX" yaml:":retry_index"`
+	RunnerID         string `env:"RUNNER_ID" yaml:"-"`
+}
+
+func (w *webappioMetadata) Init(envs map[string]string, log logger.Logger) error {
+	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.GitCommit)
+
+	return nil
+}
+
+func (w *webappioMetadata) Branch() string {
+	return w.GitBranch
+}
+
+func (w *webappioMetadata) BuildURL() string {
+	return fmt.Sprintf(
+		"https://webapp.io/%s/%s/%d/%s-%d",
+		w.OrganizationName,
+		w.RepositoryName,
+		w.JobID,
+		w.RunnerID,
+		w.RetryIndex,
+	)
+}
+
+func (w *webappioMetadata) CommitSHA() string {
+	return w.GitCommit
+}
+
+func (w *webappioMetadata) Name() string {
+	return "webapp.io"
+}
+
+func (w *webappioMetadata) RepoNameWithOwner() string {
+	return fmt.Sprintf("%s/%s", w.RepositoryOwner, w.RepositoryName)
 }
