@@ -24,6 +24,13 @@ async function handleEvent(event) {
       }
     }
 
+    const pathname = new URL(event.request.url).pathname
+
+    // if the root URL is requested, redirect to the latest release on GitHub
+    if (pathname === '/') {
+      return Response.redirect('https://github.com/buildpulse/test-reporter/releases/latest', 302)
+    }
+
     const page = await getAssetFromKV(event, options)
 
     // allow headers to be altered
@@ -34,7 +41,6 @@ async function handleEvent(event) {
     response.headers.set('Referrer-Policy', 'unsafe-url')
     response.headers.set('Feature-Policy', 'none')
 
-    const pathname = new URL(event.request.url).pathname
     const pathnameWithoutLeadingSlash = pathname.substring(1)
     if (isTestReporterBinary(pathnameWithoutLeadingSlash)) {
       response.headers.set('Content-Type', 'application/octet-stream')
