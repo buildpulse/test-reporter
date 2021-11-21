@@ -28,19 +28,17 @@ async function handleEvent(event) {
 
     // allow headers to be altered
     const response = new Response(page.body, page)
-
     response.headers.set('X-XSS-Protection', '1; mode=block')
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('X-Frame-Options', 'DENY')
     response.headers.set('Referrer-Policy', 'unsafe-url')
     response.headers.set('Feature-Policy', 'none')
 
-    if (response.ok) {
-      const match = event.request.url.match('\/(?<filename>test[-_]reporter[-_](darwin|linux)[-_](amd64|arm64)$)')
-      if (match) {
-        response.headers.set('Content-Type', 'application/octet-stream')
-        response.headers.set('Content-Disposition', `attachment; filename=${match.groups['filename']}`)
-      }
+    const pathname = new URL(event.request.url).pathname
+    const pathnameWithoutLeadingSlash = pathname.substring(1)
+    if (isTestReporterBinary(pathnameWithoutLeadingSlash)) {
+      response.headers.set('Content-Type', 'application/octet-stream')
+      response.headers.set('Content-Disposition', `attachment; filename=${pathnameWithoutLeadingSlash}`)
     }
 
     return response
@@ -59,4 +57,11 @@ async function handleEvent(event) {
 
     return new Response(e.message || e.toString(), { status: 500 })
   }
+}
+
+function isTestReporterBinary(filename) {
+  const kebabCaseFileRegex = /test-reporter-[a-z0-9]+-[a-z0-9]+$/
+  const snakeCaseFileRegex = /test_reporter_[a-z0-9]+_[a-z0-9]+$/
+
+  return filename.match(kebabCaseFileRegex) || filename.match(snakeCaseFileRegex)
 }
