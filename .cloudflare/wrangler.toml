@@ -1,0 +1,10 @@
+account_id = "aced8f025152485c4e426480ad15aec0"
+name = "get-buildpulse-io"
+type = "webpack"
+site = { bucket = "./public" }
+compatibility_date = "2021-11-20"
+zone_id = "34da2037267483863bf8e1ede03af05e"
+route = "get.buildpulse.io/*"
+
+[env.development]
+workers_dev = true
