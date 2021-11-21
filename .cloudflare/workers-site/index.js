@@ -35,6 +35,14 @@ async function handleEvent(event) {
     response.headers.set('Referrer-Policy', 'unsafe-url')
     response.headers.set('Feature-Policy', 'none')
 
+    if (response.ok) {
+      const match = event.request.url.match('\/(?<filename>test[-_]reporter[-_](darwin|linux)[-_](amd64|arm64)$)')
+      if (match) {
+        response.headers.set('Content-Type', 'application/octet-stream')
+        response.headers.set('Content-Disposition', `attachment; filename=${match.groups['filename']}`)
+      }
+    }
+
     return response
 
   } catch (e) {
