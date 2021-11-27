@@ -3,6 +3,7 @@ name = "get-buildpulse-io"
 type = "webpack"
 site = { bucket = "./public" }
 compatibility_date = "2021-11-20"
+usage_model = "unbound"
 zone_id = "34da2037267483863bf8e1ede03af05e"
 route = "get.buildpulse.io/*"
 
