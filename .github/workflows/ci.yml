@@ -14,7 +14,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '1.17'
       id: go
 
     - name: Check out code into the Go module directory
@@ -74,7 +74,7 @@ jobs:
     - name: Set up Go 1.x
       uses: actions/setup-go@v2
       with:
-        go-version: '1.16'
+        go-version: '1.17'
       id: go
 
     - name: Check out code into the Go module directory
@@ -113,7 +113,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.16
+          go-version: 1.17
       - name: Install upx
         run: brew install upx
       - name: Run GoReleaser
