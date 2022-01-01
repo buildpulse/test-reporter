@@ -6,8 +6,7 @@ if ! [ -z "$(git status --porcelain)" ]; then
 fi
 
 if ! command -v goreleaser &> /dev/null; then
-  curl -sfL https://install.goreleaser.com/github.com/goreleaser/goreleaser.sh | sh
-  export PATH="bin:$PATH"
+  go install github.com/goreleaser/goreleaser@latest
 fi
 
 cd "$(dirname "$0")/.."
