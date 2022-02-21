@@ -11,43 +11,43 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.17'
-      id: go
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.17"
+        id: go
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-    - name: Get dependencies
-      run: go get -v -t -d ./...
+      - name: Get dependencies
+        run: go get -v -t -d ./...
 
-    - name: Fetch build tools
-      run: |
-        go install golang.org/x/lint/golint@latest
-        go install gotest.tools/gotestsum@latest
+      - name: Fetch build tools
+        run: |
+          go install golang.org/x/lint/golint@latest
+          go install gotest.tools/gotestsum@latest
 
-    - name: Build
-      run: go build -v ./...
+      - name: Build
+        run: go build -v ./...
 
-    - name: Lint
-      run: golint -set_exit_status ./...
+      - name: Lint
+        run: golint -set_exit_status ./...
 
-    - name: Test
-      run: |
-        mkdir -p tmp/test-results
-        gotestsum --junitfile tmp/test-results/gotestsum-report.xml ./...
+      - name: Test
+        run: |
+          mkdir -p tmp/test-results
+          gotestsum --junitfile tmp/test-results/gotestsum-report.xml ./...
 
-    - name: Upload test results to BuildPulse for flaky test detection -- Inception! 🤯
-      if: '!cancelled()' # Run this step even when the tests fail. Skip if the workflow is cancelled.
-      env:
-        BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
-      run: |
-        curl -fsSL https://github.com/buildpulse/test-reporter/releases/latest/download/test-reporter-linux-amd64 > ./buildpulse-test-reporter
-        chmod +x ./buildpulse-test-reporter
-        ./buildpulse-test-reporter submit tmp/test-results --account-id 68192324 --repository-id 280914963
+      - name: Upload test results to BuildPulse for flaky test detection -- Inception! 🤯
+        if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
+        env:
+          BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+        run: |
+          curl -fsSL https://github.com/buildpulse/test-reporter/releases/latest/download/test-reporter-linux-amd64 > ./buildpulse-test-reporter
+          chmod +x ./buildpulse-test-reporter
+          ./buildpulse-test-reporter submit tmp/test-results --account-id 68192324 --repository-id 280914963
 
   golangci-lint:
     name: Lint
@@ -71,29 +71,29 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
 
     steps:
-    - name: Set up Go 1.x
-      uses: actions/setup-go@v2
-      with:
-        go-version: '1.17'
-      id: go
+      - name: Set up Go 1.x
+        uses: actions/setup-go@v2
+        with:
+          go-version: "1.17"
+        id: go
 
-    - name: Check out code into the Go module directory
-      uses: actions/checkout@v2
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v2
 
-    - name: Build executable binaries
-      run: ./script/build-snapshot --single-target
+      - name: Build executable binaries
+        run: ./script/build-snapshot --single-target
 
-    - name: Output version from binary
-      run: ./dist/test_reporter_linux_amd64/test-reporter --version
+      - name: Output version from binary
+        run: ./dist/test_reporter_linux_amd64/test-reporter --version
 
-    - name: Verify binary can successfully package up test results and upload them to BuildPulse
-      env:
-        BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
-        BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
-      run: |
-        mkdir -p fake-test-results-dir
-        touch fake-test-results-dir/report.xml
-        ./dist/test_reporter_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
+      - name: Verify binary can successfully package up test results and upload them to BuildPulse
+        env:
+          BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+        run: |
+          mkdir -p fake-test-results-dir
+          touch fake-test-results-dir/report.xml
+          ./dist/test_reporter_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
 
   create-release:
     name: Create draft release
@@ -141,37 +141,37 @@ jobs:
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-    - name: Download binary from release
-      run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: 'Verify basic "runnability"'
-      run: docker run --volume $(pwd):/tmp --workdir /tmp alpine:3.12 sh -c "chmod +x dist/test-reporter-linux-amd64 && dist/test-reporter-linux-amd64 --version"
+      - name: Download binary from release
+        run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Verify basic "runnability"'
+        run: docker run --volume $(pwd):/tmp --workdir /tmp alpine:3.12 sh -c "chmod +x dist/test-reporter-linux-amd64 && dist/test-reporter-linux-amd64 --version"
 
   verify-macos:
     name: Verify binary (macOS)
     needs: create-release
     runs-on: macos-latest
     steps:
-    - name: Download binary from release
-      run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-darwin-amd64' --dir dist
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: 'Verify basic "runnability"'
-      run: |
-        chmod +x dist/test-reporter-darwin-amd64
-        dist/test-reporter-darwin-amd64 --version
+      - name: Download binary from release
+        run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-darwin-amd64' --dir dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Verify basic "runnability"'
+        run: |
+          chmod +x dist/test-reporter-darwin-amd64
+          dist/test-reporter-darwin-amd64 --version
 
   verify-ubuntu:
     name: Verify binary (Ubuntu)
     needs: create-release
     runs-on: ubuntu-latest
     steps:
-    - name: Download binary from release
-      run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    - name: 'Verify basic "runnability"'
-      run: |
-        chmod +x dist/test-reporter-linux-amd64
-        dist/test-reporter-linux-amd64 --version
+      - name: Download binary from release
+        run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Verify basic "runnability"'
+        run: |
+          chmod +x dist/test-reporter-linux-amd64
+          dist/test-reporter-linux-amd64 --version
