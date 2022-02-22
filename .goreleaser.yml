@@ -3,23 +3,30 @@ before:
     - go mod tidy
 
 builds:
-  - main: ./cmd/test-reporter/main.go
-    id: test_reporter
-    binary: "test-reporter"
-    env:
-      - CGO_ENABLED=0
-    ldflags:
-      - -X main.Version={{.Version}}
-      - -X main.Commit={{.ShortCommit}}
-    goos:
-      - linux
-      - darwin
-    goarch:
-      - amd64
-      - arm64
-    hooks:
-      post:
-        - upx "{{ .Path }}"
+  - <<: &build_defaults
+      main: ./cmd/test-reporter/main.go
+      binary: "test-reporter"
+      env:
+        - CGO_ENABLED=0
+      ldflags:
+        - -X main.Version={{.Version}}
+        - -X main.Commit={{.ShortCommit}}
+      hooks:
+        post:
+          - upx "{{ .Path }}"
+      id: linux
+      goos: [linux]
+      goarch: [amd64, arm64]
+
+  - <<: *build_defaults
+    id: macos
+    goos: [darwin]
+    goarch: [amd64, arm64]
+
+  - <<: *build_defaults
+    id: windows
+    goos: [windows]
+    goarch: [amd64]
 
 snapshot:
   name_template: "SNAPSHOT-{{.ShortCommit}}"

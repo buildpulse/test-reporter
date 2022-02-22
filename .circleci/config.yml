@@ -17,14 +17,14 @@ jobs:
 
       - run:
           name: Output version
-          command: ./dist/test_reporter_linux_amd64/test-reporter --version
+          command: ./dist/linux_linux_amd64/test-reporter --version
 
       - run:
           name: Verify binary can successfully package up test results and upload them to BuildPulse
           command: |
             mkdir -p fake-test-results-dir
             touch fake-test-results-dir/report.xml
-            ./dist/test_reporter_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
+            ./dist/linux_linux_amd64/test-reporter submit fake-test-results-dir --account-id 68192324 --repository-id 280914963
 
 workflows:
   version: 2
