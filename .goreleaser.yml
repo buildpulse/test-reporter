@@ -1,6 +1,7 @@
 before:
   hooks:
     - go mod tidy
+
 builds:
   - main: ./cmd/test-reporter/main.go
     id: test_reporter
@@ -19,8 +20,10 @@ builds:
     hooks:
       post:
         - upx "{{ .Path }}"
+
 snapshot:
   name_template: "SNAPSHOT-{{.ShortCommit}}"
+
 archives:
   - id: default
     format: binary
@@ -28,11 +31,14 @@ archives:
   - id: snake_case # Also offer binaries with snake_case filenames to support the updated URLs implemented in response to the 2021-09-20 GitHub incident (https://twitter.com/BuildPulseApp/status/1440089498566623241)
     format: binary
     name_template: "test_reporter_{{ .Os }}_{{ .Arch }}"
+
 checksum:
   name_template: "checksums.txt"
+
 release:
   draft: true
   prerelease: auto
+
 changelog:
   sort: asc
   filters:
