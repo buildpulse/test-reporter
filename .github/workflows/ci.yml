@@ -175,3 +175,15 @@ jobs:
         run: |
           chmod +x dist/test-reporter-linux-amd64
           dist/test-reporter-linux-amd64 --version
+
+  verify-windows:
+    name: Verify binary (Windows)
+    needs: create-release
+    runs-on: windows-latest
+    steps:
+      - name: Download binary from release
+        run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-windows-amd64.exe' --dir dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: 'Verify basic "runnability"'
+        run: dist/test-reporter-windows-amd64.exe --version
