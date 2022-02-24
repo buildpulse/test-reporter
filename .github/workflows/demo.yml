@@ -1,0 +1,36 @@
+name: Usage Demo
+
+on:
+  workflow_dispatch:
+
+env:
+  BUILDPULSE_ACCOUNT_ID: 68192324 # Replace this value with your BuildPulse account ID
+  BUILDPULSE_REPOSITORY_ID: 280914963 # Replace this value with your BuildPulse repository ID
+
+jobs:
+  macos-demo:
+    name: macos Demo
+
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: echo "Run your tests and generate XML reports for your test results"
+
+      - name: Create fake XML report for demo purposes
+        run: |
+          mkdir test-results
+          touch test-results/report.xml
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
+        env:
+          BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+        run: |
+          curl -fsSL https://get.buildpulse.io/test-reporter-darwin-amd64 > ./buildpulse-test-reporter
+          chmod +x ./buildpulse-test-reporter
+          ./buildpulse-test-reporter submit test-results/report.xml --account-id $BUILDPULSE_ACCOUNT_ID --repository-id $BUILDPULSE_REPOSITORY_ID
