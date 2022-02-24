@@ -34,3 +34,29 @@ jobs:
           curl -fsSL https://get.buildpulse.io/test-reporter-darwin-amd64 > ./buildpulse-test-reporter
           chmod +x ./buildpulse-test-reporter
           ./buildpulse-test-reporter submit test-results/report.xml --account-id $BUILDPULSE_ACCOUNT_ID --repository-id $BUILDPULSE_REPOSITORY_ID
+
+  windows-demo:
+    name: Windows Demo
+
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Run tests
+        run: echo "Run your tests and generate XML reports for your test results"
+
+      - name: Create fake XML report for demo purposes
+        run: |
+          New-Item -Path test-results -ItemType Directory
+          New-Item -Path test-results/report.xml -ItemType file
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: "!cancelled()" # Run this step even when the tests fail. Skip if the workflow is cancelled.
+        env:
+          BUILDPULSE_ACCESS_KEY_ID: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          BUILDPULSE_SECRET_ACCESS_KEY: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
+        run: |
+          Invoke-WebRequest -OutFile test-reporter.exe https://get.buildpulse.io/test-reporter-windows-amd64.exe
+          ./test-reporter.exe submit test-results/report.xml --account-id $Env:BUILDPULSE_ACCOUNT_ID --repository-id $Env:BUILDPULSE_REPOSITORY_ID
