@@ -9,7 +9,7 @@ env:
 
 jobs:
   macos-demo:
-    name: macos Demo
+    name: macOS Demo
 
     runs-on: macos-latest
 
