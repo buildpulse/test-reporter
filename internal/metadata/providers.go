@@ -173,18 +173,19 @@ var _ providerMetadata = (*githubMetadata)(nil)
 
 type githubMetadata struct {
 	// Fields derived from GitHub-specific environment variables
-	GithubActor     string `env:"GITHUB_ACTOR" yaml:":github_actor"`
-	GithubBaseRef   string `env:"GITHUB_BASE_REF" yaml:":github_base_ref"`
-	GithubEventName string `env:"GITHUB_EVENT_NAME" yaml:":github_event_name"`
-	GithubHeadRef   string `env:"GITHUB_HEAD_REF" yaml:":github_head_ref"`
-	GithubRef       string `env:"GITHUB_REF" yaml:":github_ref"`
-	GithubRepoNWO   string `env:"GITHUB_REPOSITORY" yaml:"-"`
-	GithubRepoURL   string `yaml:":github_repo_url"`
-	GithubRunID     uint   `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
-	GithubRunNumber uint   `env:"GITHUB_RUN_NUMBER" yaml:":github_run_number"`
-	GithubServerURL string `env:"GITHUB_SERVER_URL" yaml:"-"`
-	GithubSHA       string `env:"GITHUB_SHA" yaml:"-"`
-	GithubWorkflow  string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
+	GithubActor      string `env:"GITHUB_ACTOR" yaml:":github_actor"`
+	GithubBaseRef    string `env:"GITHUB_BASE_REF" yaml:":github_base_ref"`
+	GithubEventName  string `env:"GITHUB_EVENT_NAME" yaml:":github_event_name"`
+	GithubHeadRef    string `env:"GITHUB_HEAD_REF" yaml:":github_head_ref"`
+	GithubRef        string `env:"GITHUB_REF" yaml:":github_ref"`
+	GithubRepoNWO    string `env:"GITHUB_REPOSITORY" yaml:"-"`
+	GithubRepoURL    string `yaml:":github_repo_url"`
+	GithubRunAttempt uint   `env:"GITHUB_RUN_ATTEMPT" yaml:":github_run_attempt"`
+	GithubRunID      uint   `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
+	GithubRunNumber  uint   `env:"GITHUB_RUN_NUMBER" yaml:":github_run_number"`
+	GithubServerURL  string `env:"GITHUB_SERVER_URL" yaml:"-"`
+	GithubSHA        string `env:"GITHUB_SHA" yaml:"-"`
+	GithubWorkflow   string `env:"GITHUB_WORKFLOW" yaml:":github_workflow"`
 
 	branch   string
 	buildURL string
@@ -203,7 +204,7 @@ func (g *githubMetadata) Init(envs map[string]string, log logger.Logger) error {
 
 	g.GithubRepoURL = fmt.Sprintf("%s/%s", g.GithubServerURL, g.GithubRepoNWO)
 
-	g.buildURL = fmt.Sprintf("%s/actions/runs/%d", g.GithubRepoURL, g.GithubRunID)
+	g.buildURL = fmt.Sprintf("%s/actions/runs/%d/attempts/%d", g.GithubRepoURL, g.GithubRunID, g.GithubRunAttempt)
 
 	isPullRequest := g.GithubEventName == "pull_request"
 	isBranch, err := regexp.MatchString("^refs/heads/", g.GithubRef)
