@@ -6,7 +6,7 @@ if ! [ -z "$(git status --porcelain)" ]; then
 fi
 
 if ! command -v goreleaser &> /dev/null; then
-  go install github.com/goreleaser/goreleaser@latest
+  go install github.com/goreleaser/goreleaser@v1.7.0
 fi
 
 cd "$(dirname "$0")/.."
