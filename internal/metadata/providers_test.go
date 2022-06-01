@@ -5,7 +5,7 @@ import (
 
 	"github.com/buildpulse/test-reporter/internal/logger"
 	"github.com/stretchr/testify/assert"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 func Test_buildkiteMetadata_Init_extraFields(t *testing.T) {

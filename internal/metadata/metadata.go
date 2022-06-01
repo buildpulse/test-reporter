@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/buildpulse/test-reporter/internal/logger"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // A Metadata instance provides metadata about a set of test results. It

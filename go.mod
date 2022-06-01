@@ -11,7 +11,7 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1-0.20210112195346-074da64920d3
 	github.com/otiai10/copy v1.7.0
 	github.com/stretchr/testify v1.7.1
-	gopkg.in/yaml.v2 v2.4.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -43,5 +43,5 @@ require (
 	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c // indirect
+	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
