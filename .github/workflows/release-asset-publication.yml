@@ -27,3 +27,37 @@ jobs:
         with:
           apiToken: ${{ secrets.CF_API_TOKEN }}
           workingDirectory: .cloudflare
+
+  publish-to-aws-ecr:
+    name: Publish to AWS ECR
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+
+      - name: Fetch Docker credentials
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ECR_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_ECR_SECRET_ACCESS_KEY }}
+        run: aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws/o4f6c4r1
+
+      - name: Build image
+        run: docker build -t test-reporter .
+
+      - name: Publish image
+        run: |
+          docker tag test-reporter:latest public.ecr.aws/o4f6c4r1/test-reporter:latest && \
+            docker push public.ecr.aws/o4f6c4r1/test-reporter:latest
+
+  verify-aws-ecr-image:
+    name: Verify Docker image
+
+    needs: [publish-to-aws-ecr]
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 'Verify basic "runnability"'
+        run: docker run public.ecr.aws/o4f6c4r1/test-reporter:latest sh -c "./buildpulse-test-reporter --version"
