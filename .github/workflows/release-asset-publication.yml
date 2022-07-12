@@ -1,9 +1,14 @@
 name: Publish Release Assets
 
 on:
-  workflow_dispatch:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Fully-qualified tag ref (e.g., "refs/tags/v0.1.2")'
+        required: true
+        type: string
 
 jobs:
   publish-to-cloudflare:
@@ -34,6 +39,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Get version
+        id: get_version
+        env:
+          INPUTS_TAG: ${{ inputs.tag }}
+        run: |
+          if [[ -n "${INPUTS_TAG}" ]]; then
+            echo ::set-output name=VERSION::${INPUTS_TAG/refs\/tags\/v/}
+          else
+            echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\/v/}
+          fi
+
       - name: Check out code
         uses: actions/checkout@v3
 
@@ -48,8 +64,10 @@ jobs:
 
       - name: Publish image
         run: |
-          docker tag test-reporter:latest public.ecr.aws/o4f6c4r1/test-reporter:latest && \
-            docker push public.ecr.aws/o4f6c4r1/test-reporter:latest
+          docker tag test-reporter:latest public.ecr.aws/o4f6c4r1/test-reporter:latest &&
+            docker tag test-reporter:latest public.ecr.aws/o4f6c4r1/test-reporter:${{ steps.get_version.outputs.VERSION }} &&
+            docker push public.ecr.aws/o4f6c4r1/test-reporter:latest &&
+            docker push public.ecr.aws/o4f6c4r1/test-reporter:${{ steps.get_version.outputs.VERSION }}
 
   verify-aws-ecr-image:
     name: Verify Docker image
