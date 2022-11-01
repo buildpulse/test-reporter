@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.3.0
 	github.com/mholt/archiver/v3 v3.5.1-0.20210112195346-074da64920d3
 	github.com/otiai10/copy v1.7.0
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 
