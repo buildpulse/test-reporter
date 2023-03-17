@@ -4,4 +4,14 @@ The BuildPulse test reporter is a binary that connects your continuous integrati
 
 Get started at [buildpulse.io][].
 
+Setup:
+
+Install goreleaser to build
+```
+brew install goreleaser/tap/goreleaser upx
+```
+
+To Build:
+`./script/build-snapshot`
+
 [buildpulse.io]: https://buildpulse.io?utm_source=github.com&utm_campaign=tool-repositories&utm_content=test-reporter-text-link

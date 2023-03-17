@@ -39,6 +39,8 @@ func newProviderMetadata(envs map[string]string, log logger.Logger) (providerMet
 		pm = &travisMetadata{}
 	case envs["WEBAPPIO"] == "true":
 		pm = &webappioMetadata{}
+	case envs["LOCAL"] == "true":
+		pm = &localMetadata{}
 	default:
 		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, Travis CI, or webapp.io)")
 	}
@@ -181,7 +183,7 @@ type githubMetadata struct {
 	GithubRepoNWO    string `env:"GITHUB_REPOSITORY" yaml:"-"`
 	GithubRepoURL    string `yaml:":github_repo_url"`
 	GithubRunAttempt uint   `env:"GITHUB_RUN_ATTEMPT" yaml:":github_run_attempt"`
-	GithubRunID      uint   `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
+	GithubRunID      uint64 `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
 	GithubRunNumber  uint   `env:"GITHUB_RUN_NUMBER" yaml:":github_run_number"`
 	GithubServerURL  string `env:"GITHUB_SERVER_URL" yaml:"-"`
 	GithubSHA        string `env:"GITHUB_SHA" yaml:"-"`
@@ -481,4 +483,41 @@ func (w *webappioMetadata) Name() string {
 
 func (w *webappioMetadata) RepoNameWithOwner() string {
 	return fmt.Sprintf("%s/%s", w.RepositoryOwner, w.RepositoryName)
+}
+
+var _ providerMetadata = (*localMetadata)(nil)
+
+type localMetadata struct {
+	GitBranch    string `env:"GIT_BRANCH" yaml:"-"`
+	GitCommitSHA string `env:"GIT_COMMIT" yaml:"-"`
+}
+
+func (l *localMetadata) Init(envs map[string]string, log logger.Logger) error {
+	if err := env.Parse(l, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", l.GitCommitSHA)
+
+	return nil
+}
+
+func (l *localMetadata) Branch() string {
+	return l.GitBranch
+}
+
+func (l *localMetadata) BuildURL() string {
+	return "http://local"
+}
+
+func (l *localMetadata) CommitSHA() string {
+	return l.GitCommitSHA
+}
+
+func (l *localMetadata) Name() string {
+	return "local"
+}
+
+func (l *localMetadata) RepoNameWithOwner() string {
+	return "local"
 }
