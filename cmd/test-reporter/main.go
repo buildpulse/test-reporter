@@ -74,7 +74,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "\n%s\n\nSee more help with --help\n", err)
 			os.Exit(1)
 		}
-		_, err := c.Run() // run
+		_, err := c.Run()
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)

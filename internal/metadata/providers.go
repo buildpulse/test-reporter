@@ -183,7 +183,7 @@ type githubMetadata struct {
 	GithubRepoNWO    string `env:"GITHUB_REPOSITORY" yaml:"-"`
 	GithubRepoURL    string `yaml:":github_repo_url"`
 	GithubRunAttempt uint   `env:"GITHUB_RUN_ATTEMPT" yaml:":github_run_attempt"`
-	GithubRunID      uint   `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
+	GithubRunID      uint64 `env:"GITHUB_RUN_ID" yaml:":github_run_id"`
 	GithubRunNumber  uint   `env:"GITHUB_RUN_NUMBER" yaml:":github_run_number"`
 	GithubServerURL  string `env:"GITHUB_SERVER_URL" yaml:"-"`
 	GithubSHA        string `env:"GITHUB_SHA" yaml:"-"`
