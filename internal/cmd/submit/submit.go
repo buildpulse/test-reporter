@@ -364,11 +364,11 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	config := aws.NewConfig().
 		WithCredentials(awscreds.NewCredentials(provider)).
 		WithRegion("us-east-1").
-		WithHTTPClient(client).
-		WithS3ForcePathStyle(true)
+		WithHTTPClient(client)
 
 	if len(endpointURL) > 0 {
-		config = config.WithEndpoint(endpointURL)
+		config = config.WithEndpoint(endpointURL).
+			WithS3ForcePathStyle(true) // need for running against local s3, virtual-host style (default) would require /etc/hosts change
 	}
 
 	sess, err := session.NewSession(config)
