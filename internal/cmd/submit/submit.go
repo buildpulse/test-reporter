@@ -364,7 +364,7 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 	config := aws.NewConfig().
 		WithCredentials(awscreds.NewCredentials(provider)).
 		WithRegion("us-east-1").
-		WithHTTPClient(client)
+		WithHTTPClient(client).WithLogLevel(aws.LogDebug)
 
 	if len(endpointURL) > 0 {
 		config = config.WithEndpoint(endpointURL).
