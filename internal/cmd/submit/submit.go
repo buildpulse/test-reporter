@@ -6,9 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -72,7 +70,6 @@ type Submit struct {
 	paths          []string
 	bucket         string
 	accountID      uint64
-	endpointURL    string
 	repositoryID   uint64
 	repositoryPath string
 	tree           string
@@ -93,9 +90,8 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.Uint64Var(&s.accountID, "account-id", 0, "BuildPulse account ID (required)")
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
-	s.fs.StringVar(&s.endpointURL, "endpoint-url", "", "Hostname to point AWS client to")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
-	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
+	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
 	s.logger.Println("Initiating `submit`")
@@ -150,12 +146,6 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 
 	if s.repositoryID == 0 {
 		return fmt.Errorf("missing required flag: -repository-id")
-	}
-
-	if len(s.endpointURL) > 0 {
-		if _, err := url.ParseRequestURI(s.endpointURL); err != nil {
-			return fmt.Errorf("optional flag: -endpoint-url")
-		}
 	}
 
 	id, ok := envs["BUILDPULSE_ACCESS_KEY_ID"]
@@ -251,7 +241,7 @@ func (s *Submit) bundle() (string, error) {
 		return "", err
 	}
 
-	yamlfile, err := ioutil.TempFile("", "buildpulse-*.yml")
+	yamlfile, err := os.CreateTemp("", "buildpulse-*.yml")
 	if err != nil {
 		return "", err
 	}
@@ -266,7 +256,7 @@ func (s *Submit) bundle() (string, error) {
 	// Initialize the tarfile for writing
 	//////////////////////////////////////////////////////////////////////////////
 
-	f, err := ioutil.TempFile("", "buildpulse-*.tar")
+	f, err := os.CreateTemp("", "buildpulse-*.tar")
 	if err != nil {
 		return "", err
 	}
@@ -299,7 +289,7 @@ func (s *Submit) bundle() (string, error) {
 	// Write the log to the tarfile
 	//////////////////////////////////////////////////////////////////////////////
 
-	logfile, err := ioutil.TempFile("", "buildpulse-*.log")
+	logfile, err := os.CreateTemp("", "buildpulse-*.log")
 	if err != nil {
 		return "", err
 	}
@@ -324,7 +314,7 @@ func (s *Submit) bundle() (string, error) {
 func (s *Submit) upload(path string) (string, error) {
 	key := fmt.Sprintf("%d/%d/buildpulse-%s.gz", s.accountID, s.repositoryID, s.idgen())
 
-	err := putS3Object(s.client, s.credentials.AccessKeyID, s.credentials.SecretAccessKey, s.bucket, key, path, s.endpointURL)
+	err := putS3Object(s.client, s.credentials.AccessKeyID, s.credentials.SecretAccessKey, s.bucket, key, path)
 	if err != nil {
 		return "", err
 	}
@@ -339,7 +329,7 @@ func toGz(src string) (dest string, err error) {
 		return "", err
 	}
 
-	zipfile, err := ioutil.TempFile("", "buildpulse-*.gz")
+	zipfile, err := os.CreateTemp("", "buildpulse-*.gz")
 	if err != nil {
 		return "", err
 	}
@@ -353,7 +343,7 @@ func toGz(src string) (dest string, err error) {
 }
 
 // putS3Object puts the named file (src) as an object in the named bucket with the named key.
-func putS3Object(client *http.Client, id string, secret string, bucket string, objectKey string, src string, endpointURL string) error {
+func putS3Object(client *http.Client, id string, secret string, bucket string, objectKey string, src string) error {
 	provider := &awscreds.StaticProvider{
 		Value: awscreds.Value{
 			AccessKeyID:     id,
@@ -361,17 +351,12 @@ func putS3Object(client *http.Client, id string, secret string, bucket string, o
 		},
 	}
 
-	config := aws.NewConfig().
-		WithCredentials(awscreds.NewCredentials(provider)).
-		WithRegion("us-east-1").
-		WithHTTPClient(client).WithLogLevel(aws.LogDebug)
-
-	if len(endpointURL) > 0 {
-		config = config.WithEndpoint(endpointURL).
-			WithS3ForcePathStyle(true) // need for running against local s3, virtual-host style (default) would require /etc/hosts change
-	}
-
-	sess, err := session.NewSession(config)
+	sess, err := session.NewSession(
+		aws.NewConfig().
+			WithCredentials(awscreds.NewCredentials(provider)).
+			WithRegion("us-east-1").
+			WithHTTPClient(client),
+	)
 	if err != nil {
 		return err
 	}

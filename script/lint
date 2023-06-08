@@ -1,0 +1,5 @@
+#!/bin/bash -e
+
+golint -set_exit_status ./...
+golangci-lint run
+

@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -168,7 +168,7 @@ func TestNewMetadata(t *testing.T) {
 				return time.Date(2020, 7, 11, 1, 2, 3, 0, time.UTC)
 			}
 
-			expected, err := ioutil.ReadFile(tt.fixture)
+			expected, err := os.ReadFile(tt.fixture)
 			require.NoError(t, err)
 
 			authoredAt, err := time.Parse(time.RFC3339, "2020-07-09T04:05:06-05:00")
@@ -205,7 +205,7 @@ func TestNewMetadata(t *testing.T) {
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
 	_, err := NewMetadata(&Version{}, map[string]string{}, newCommitResolverStub(), time.Now, logger.New())
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "unrecognized environment")
+		assert.Contains(t, err.Error(), "missing required environment variables")
 	}
 }
 

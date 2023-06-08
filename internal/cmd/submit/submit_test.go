@@ -3,7 +3,7 @@ package submit
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -356,7 +356,7 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 	})
 
 	t.Run("NonDirectoryRepoPath", func(t *testing.T) {
-		tmpfile, err := ioutil.TempFile(os.TempDir(), "buildpulse-cli-test-fixture")
+		tmpfile, err := os.CreateTemp(os.TempDir(), "buildpulse-cli-test-fixture")
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 
@@ -411,43 +411,6 @@ func TestSubmit_Run(t *testing.T) {
 	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
 }
 
-func TestSubmit_RunCustomEndpoint(t *testing.T) {
-	r, err := recorder.New("testdata/s3-success-custom-endpoint")
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, r.Stop())
-	}()
-
-	envs := map[string]string{
-		"GITHUB_ACTIONS": "true",
-		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
-	}
-
-	log := logger.New()
-	customEndpoint := "http://localhost"
-	s := &Submit{
-		client:         &http.Client{Transport: r},
-		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
-		logger:         log,
-		version:        &metadata.Version{Number: "v1.2.3"},
-		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
-		envs:           envs,
-		paths:          []string{"testdata/example-reports-dir/example-1.xml"},
-		bucket:         "buildpulse-uploads",
-		accountID:      42,
-		repositoryID:   8675309,
-		endpointURL:    customEndpoint,
-		credentials: credentials{
-			AccessKeyID:     accessKeyID,
-			SecretAccessKey: secretAccessKey,
-		},
-	}
-
-	key, err := s.Run()
-	require.NoError(t, err)
-	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
-}
-
 func Test_bundle(t *testing.T) {
 	envs := map[string]string{
 		"GITHUB_ACTIONS": "true",
@@ -474,7 +437,7 @@ func Test_bundle(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify buildpulse.yml is present and contains expected content
-	yaml, err := ioutil.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
+	yaml, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(yaml), ":ci_provider: github-actions")
 	assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
@@ -488,7 +451,7 @@ func Test_bundle(t *testing.T) {
 	)
 
 	// Verify buildpulse.log is present and contains expected content
-	logdata, err := ioutil.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
+	logdata, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
 	require.NoError(t, err)
 	assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
 }
@@ -673,10 +636,10 @@ func Test_xmlPathsFromGlob(t *testing.T) {
 
 // assertEqualContent asserts that two files have the same content.
 func assertEqualContent(t *testing.T, expected string, actual string) {
-	expectedBytes, err := ioutil.ReadFile(expected)
+	expectedBytes, err := os.ReadFile(expected)
 	require.NoError(t, err)
 
-	actualBytes, err := ioutil.ReadFile(actual)
+	actualBytes, err := os.ReadFile(actual)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedBytes, actualBytes)
@@ -692,7 +655,7 @@ func interactionMatcher(r *http.Request, i cassette.Request) bool {
 	if _, err := b.ReadFrom(r.Body); err != nil {
 		return false
 	}
-	r.Body = ioutil.NopCloser(&b)
+	r.Body = io.NopCloser(&b)
 	return cassette.DefaultMatcher(r, i) && (b.String() == i.Body)
 }
 

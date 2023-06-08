@@ -1,7 +1,7 @@
 package tar
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -11,7 +11,7 @@ import (
 )
 
 func TestTar(t *testing.T) {
-	f, err := ioutil.TempFile("", "*.tar")
+	f, err := os.CreateTemp("", "*.tar")
 	require.NoError(t, err)
 	defer f.Close()
 
@@ -57,10 +57,10 @@ func TestTar(t *testing.T) {
 
 // assertEqualContent asserts that two files have the same content.
 func assertEqualContent(t *testing.T, expected string, actual string) {
-	expectedBytes, err := ioutil.ReadFile(expected)
+	expectedBytes, err := os.ReadFile(expected)
 	require.NoError(t, err)
 
-	actualBytes, err := ioutil.ReadFile(actual)
+	actualBytes, err := os.ReadFile(actual)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedBytes, actualBytes)
