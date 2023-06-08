@@ -8,6 +8,121 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+func Test_azurePipelinesMetadata_Init_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "with github source",
+			envs: map[string]string{
+				"BUILD_SOURCEVERSION":                "00000000-0000-0000-0000-000000000000",
+				"BUILD_SOURCEBRANCHNAME":             "some-branch-name",
+				"BUILD_BUILDURI":                     "https://github.com/some-forker/some-repo",
+				"BUILD_REPOSITORY_NAME":              "org/some-repo",
+				"SYSTEM_TEAMFOUNDATIONCOLLECTIONURI": "org",
+			},
+			expectedLines: []string{
+				":build_sourceversion: 00000000-0000-0000-0000-000000000000",
+				":build_sourcebranchname: some-branch-name",
+				":build_builduri: https://github.com/some-forker/some-repo",
+				":build_repository_name: org/some-repo",
+				":system_teamfoundationcollectionuri: org",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := azurePipelinesMetadata{}
+			err := meta.Init(tt.envs, logger.New())
+			assert.NoError(t, err)
+
+			yaml, err := yaml.Marshal(meta)
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
+		})
+	}
+}
+
+func Test_bitbucketMetadata_Init_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "with pull request",
+			envs: map[string]string{
+				"BITBUCKET_COMMIT":          "00000000-0000-0000-0000-000000000000",
+				"BITBUCKET_BRANCH":          "some-branch-name",
+				"BITBUCKET_GIT_HTTP_ORIGIN": "https://github.com/some-forker/some-repo",
+				"BITBUCKET_WORKSPACE":       "org",
+				"BITBUCKET_BUILD_NUMBER":    "99",
+				"BITBUCKET_REPO_SLUG":       "some-repo",
+			},
+			expectedLines: []string{
+				":bitbucket_commit: 00000000-0000-0000-0000-000000000000",
+				":bitbucket_branch: some-branch-name",
+				":bitbucket_git_http_origin: https://github.com/some-forker/some-repo",
+				":bitbucket_workspace: org",
+				":bitbucket_build_number: 99",
+				":bitbucket_repo_slug: some-repo",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := bitbucketMetadata{}
+			err := meta.Init(tt.envs, logger.New())
+			assert.NoError(t, err)
+
+			yaml, err := yaml.Marshal(meta)
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
+		})
+	}
+}
+
+func Test_awsCodeBuildMetadata_Init_extraFields(t *testing.T) {
+	tests := []struct {
+		name          string
+		envs          map[string]string
+		expectedLines []string
+	}{
+		{
+			name: "with pull request",
+			envs: map[string]string{
+				"CODEBUILD_SOURCE_VERSION":          "pr/99",
+				"CODEBUILD_PUBLIC_BUILD_URL":        "https://github.com/some-forker/some-repo",
+				"CODEBUILD_RESOLVED_SOURCE_VERSION": "00000000-0000-0000-0000-000000000000",
+			},
+			expectedLines: []string{
+				":codebuild_source_version: pr/99",
+				":codebuild_public_build_url: https://github.com/some-forker/some-repo",
+				":codebuild_resolved_source_version: 00000000-0000-0000-0000-000000000000",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			meta := awsCodeBuildMetadata{}
+			err := meta.Init(tt.envs, logger.New())
+			assert.NoError(t, err)
+
+			yaml, err := yaml.Marshal(meta)
+			assert.NoError(t, err)
+			for _, line := range tt.expectedLines {
+				assert.Regexp(t, line, string(yaml))
+			}
+		})
+	}
+}
+
 func Test_buildkiteMetadata_Init_extraFields(t *testing.T) {
 	tests := []struct {
 		name          string

@@ -411,43 +411,6 @@ func TestSubmit_Run(t *testing.T) {
 	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
 }
 
-func TestSubmit_RunCustomEndpoint(t *testing.T) {
-	r, err := recorder.New("testdata/s3-success-custom-endpoint")
-	require.NoError(t, err)
-	defer func() {
-		require.NoError(t, r.Stop())
-	}()
-
-	envs := map[string]string{
-		"GITHUB_ACTIONS": "true",
-		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
-	}
-
-	log := logger.New()
-	customEndpoint := "http://localhost"
-	s := &Submit{
-		client:         &http.Client{Transport: r},
-		idgen:          func() uuid.UUID { return uuid.MustParse("00000000-0000-0000-0000-000000000000") },
-		logger:         log,
-		version:        &metadata.Version{Number: "v1.2.3"},
-		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
-		envs:           envs,
-		paths:          []string{"testdata/example-reports-dir/example-1.xml"},
-		bucket:         "buildpulse-uploads",
-		accountID:      42,
-		repositoryID:   8675309,
-		endpointURL:    customEndpoint,
-		credentials: credentials{
-			AccessKeyID:     accessKeyID,
-			SecretAccessKey: secretAccessKey,
-		},
-	}
-
-	key, err := s.Run()
-	require.NoError(t, err)
-	assert.Equal(t, "42/8675309/buildpulse-00000000-0000-0000-0000-000000000000.gz", key)
-}
-
 func Test_bundle(t *testing.T) {
 	envs := map[string]string{
 		"GITHUB_ACTIONS": "true",

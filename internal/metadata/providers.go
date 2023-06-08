@@ -2,6 +2,8 @@ package metadata
 
 import (
 	"fmt"
+	"net/url"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -39,10 +41,14 @@ func newProviderMetadata(envs map[string]string, log logger.Logger) (providerMet
 		pm = &travisMetadata{}
 	case envs["WEBAPPIO"] == "true":
 		pm = &webappioMetadata{}
-	case envs["LOCAL"] == "true":
-		pm = &localMetadata{}
+	case len(envs["CODEBUILD_BUILD_ID"]) > 0:
+		pm = &awsCodeBuildMetadata{}
+	case len(envs["BITBUCKET_BUILD_NUMBER"]) > 0:
+		pm = &bitbucketMetadata{}
+	case len(envs["BUILD_BUILDID"]) > 0:
+		pm = &azurePipelinesMetadata{}
 	default:
-		return nil, fmt.Errorf("unrecognized environment: system does not appear to be a supported CI provider (Buildkite, CircleCI, GitHub Actions, Jenkins, Semaphore, Travis CI, or webapp.io)")
+		pm = &customMetadata{}
 	}
 	log.Printf("Detected build environment: %s", pm.Name())
 
@@ -485,39 +491,247 @@ func (w *webappioMetadata) RepoNameWithOwner() string {
 	return fmt.Sprintf("%s/%s", w.RepositoryOwner, w.RepositoryName)
 }
 
-var _ providerMetadata = (*localMetadata)(nil)
+var _ providerMetadata = (*awsCodeBuildMetadata)(nil)
 
-type localMetadata struct {
-	GitBranch    string `env:"GIT_BRANCH" yaml:"-"`
-	GitCommitSHA string `env:"GIT_COMMIT" yaml:"-"`
+type awsCodeBuildMetadata struct {
+	AwsDefaultRegion               string `env:"AWS_DEFAULT_REGION" yaml:":aws_default_region,omitempty"`
+	AwsRegion                      string `env:"AWS_REGION" yaml:":aws_region,omitempty"`
+	CodebuildBatchBuildIdentifier  string `env:"CODEBUILD_BATCH_BUILD_IDENTIFIER" yaml:":codebuild_batch_build_identifier,omitempty"`
+	CodebuildBuildArn              string `env:"CODEBUILD_BUILD_ARN" yaml:":codebuild_build_arn,omitempty"`
+	CodebuildBuildId               string `env:"CODEBUILD_BUILD_ID" yaml:":codebuild_build_id,omitempty"`
+	CodebuildBuildImage            string `env:"CODEBUILD_BUILD_IMAGE" yaml:":codebuild_build_image,omitempty"`
+	CodebuildBuildNumber           uint   `env:"CODEBUILD_BUILD_NUMBER" yaml:":codebuild_build_number,omitempty"`
+	CodebuildBuildSucceeding       uint   `env:"CODEBUILD_BUILD_SUCCEEDING" yaml:":codebuild_build_succeeding,omitempty"`
+	CodebuildInitiator             string `env:"CODEBUILD_INITIATOR" yaml:":codebuild_initiator,omitempty"`
+	CodebuildKmsKeyId              string `env:"CODEBUILD_KMS_KEY_ID" yaml:":codebuild_kms_key_id,omitempty"`
+	CodebuildLogPath               string `env:"CODEBUILD_LOG_PATH" yaml:":codebuild_log_path,omitempty"`
+	CodebuildPublicBuildUrl        string `env:"CODEBUILD_PUBLIC_BUILD_URL" yaml:":codebuild_public_build_url"`
+	CodebuildResolvedSourceVersion string `env:"CODEBUILD_RESOLVED_SOURCE_VERSION" yaml:":codebuild_resolved_source_version"`
+	CodebuildSourceRepoUrl         string `env:"CODEBUILD_SOURCE_REPO_URL" yaml:":codebuild_source_repo_url,omitempty"`
+	CodebuildSourceVersion         string `env:"CODEBUILD_SOURCE_VERSION" yaml:":codebuild_source_version"`
+	CodebuildSrcDir                string `env:"CODEBUILD_SRC_DIR" yaml:":codebuild_src_dir,omitempty"`
+	CodebuildStartTime             string `env:"CODEBUILD_START_TIME" yaml:":codebuild_start_time,omitempty"`
+	CodebuildWebhookActorAccountId string `env:"CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID" yaml:":codebuild_webhook_actor_account_id,omitempty"`
+	CodebuildWebhookBaseRef        string `env:"CODEBUILD_WEBHOOK_BASE_REF" yaml:":codebuild_webhook_base_ref,omitempty"`
+	CodebuildWebhookEvent          string `env:"CODEBUILD_WEBHOOK_EVENT" yaml:":codebuild_webhook_event,omitempty"`
+	CodebuildWebhookMergeCommit    string `env:"CODEBUILD_WEBHOOK_MERGE_COMMIT" yaml:":codebuild_webhook_merge_commit,omitempty"`
+	CodebuildWebhookPrevCommit     string `env:"CODEBUILD_WEBHOOK_PREV_COMMIT" yaml:":codebuild_webhook_prev_commit,omitempty"`
+	CodebuildWebhookHeadRef        string `env:"CODEBUILD_WEBHOOK_HEAD_REF" yaml:":codebuild_webhook_head_ref,omitempty"`
+	CodebuildWebhookTrigger        string `env:"CODEBUILD_WEBHOOK_TRIGGER" yaml:":codebuild_webhook_trigger,omitempty"`
 }
 
-func (l *localMetadata) Init(envs map[string]string, log logger.Logger) error {
+func (l *awsCodeBuildMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(l, env.Options{Environment: envs}); err != nil {
 		return err
 	}
 
-	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", l.GitCommitSHA)
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", l.CodebuildResolvedSourceVersion)
 
 	return nil
 }
 
-func (l *localMetadata) Branch() string {
-	return l.GitBranch
+func (l *awsCodeBuildMetadata) Branch() string {
+	return l.CodebuildSourceVersion
 }
 
-func (l *localMetadata) BuildURL() string {
-	return "http://local"
+func (l *awsCodeBuildMetadata) BuildURL() string {
+	return l.CodebuildPublicBuildUrl
 }
 
-func (l *localMetadata) CommitSHA() string {
-	return l.GitCommitSHA
+func (l *awsCodeBuildMetadata) CommitSHA() string {
+	return l.CodebuildResolvedSourceVersion
 }
 
-func (l *localMetadata) Name() string {
-	return "local"
+func (l *awsCodeBuildMetadata) Name() string {
+	return "aws-codebuild"
 }
 
-func (l *localMetadata) RepoNameWithOwner() string {
-	return "local"
+func (l *awsCodeBuildMetadata) RepoNameWithOwner() string {
+	parsedUrl, err := url.Parse(l.BuildURL())
+
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// Splitting the Path to get the Owner and Repo name
+	splits := strings.Split(parsedUrl.Path, "/")
+	owner := splits[1]
+	repoName := strings.TrimSuffix(splits[2], ".git")
+
+	return fmt.Sprintf("%s/%s", owner, repoName)
+}
+
+var _ providerMetadata = (*bitbucketMetadata)(nil)
+
+type bitbucketMetadata struct {
+	BitbucketBuildNumber               uint   `env:"BITBUCKET_BUILD_NUMBER" yaml:":bitbucket_build_number"`
+	BitbucketCloneDir                  string `env:"BITBUCKET_CLONE_DIR" yaml:":bitbucket_clone_dir,omitempty"`
+	BitbucketCommit                    string `env:"BITBUCKET_COMMIT" yaml:":bitbucket_commit"`
+	BitbucketWorkspace                 string `env:"BITBUCKET_WORKSPACE" yaml:":bitbucket_workspace"`
+	BitbucketRepoSlug                  string `env:"BITBUCKET_REPO_SLUG" yaml:":bitbucket_repo_slug"`
+	BitbucketRepoUUID                  string `env:"BITBUCKET_REPO_UUID" yaml:":bitbucket_repo_uuid,omitempty"`
+	BitbucketRepoFullName              string `env:"BITBUCKET_REPO_FULL_NAME" yaml:":bitbucket_repo_full_name,omitempty"`
+	BitbucketBranch                    string `env:"BITBUCKET_BRANCH" yaml:":bitbucket_branch"`
+	BitbucketTag                       string `env:"BITBUCKET_TAG" yaml:":bitbucket_tag,omitempty"`
+	BitbucketBookmark                  string `env:"BITBUCKET_BOOKMARK" yaml:":bitbucket_bookmark,omitempty"`
+	BitbucketParallelStep              string `env:"BITBUCKET_PARALLEL_STEP" yaml:":bitbucket_parallel_step,omitempty"`
+	BitbucketParallelStepCount         string `env:"BITBUCKET_PARALLEL_STEP_COUNT" yaml:":bitbucket_parallel_step_count,omitempty"`
+	BitbucketPrId                      string `env:"BITBUCKET_PR_ID" yaml:":bitbucket_pr_id,omitempty"`
+	BitbucketPrDestinationBranch       string `env:"BITBUCKET_PR_DESTINATION_BRANCH" yaml:":bitbucket_pr_destination_branch,omitempty"`
+	BitbucketGitHttpOrigin             string `env:"BITBUCKET_GIT_HTTP_ORIGIN" yaml:":bitbucket_git_http_origin"`
+	BitbucketGitSSHOrigin              string `env:"BITBUCKET_GIT_SSH_ORIGIN" yaml:":bitbucket_git_ssh_origin,omitempty"`
+	BitbucketExitCode                  string `env:"BITBUCKET_EXIT_CODE" yaml:":bitbucket_exit_code,omitempty"`
+	BitbucketStepUUID                  string `env:"BITBUCKET_STEP_UUID" yaml:":bitbucket_step_uuid,omitempty"`
+	BitbucketPipelineUUID              string `env:"BITBUCKET_PIPELINE_UUID" yaml:":bitbucket_pipeline_uuid,omitempty"`
+	BitbucketDeploymentEnvironment     string `env:"BITBUCKET_DEPLOYMENT_ENVIRONMENT" yaml:":bitbucket_deployment_environment,omitempty"`
+	BitbucketDeploymentEnvironmentUUID string `env:"BITBUCKET_DEPLOYMENT_ENVIRONMENT_UUID" yaml:":bitbucket_deployment_environment_uuid,omitempty"`
+	BitbucketProjectKey                string `env:"BITBUCKET_PROJECT_KEY" yaml:":bitbucket_project_key,omitempty"`
+	BitbucketProjectUUID               string `env:"BITBUCKET_PROJECT_UUID" yaml:":bitbucket_project_uuid,omitempty"`
+	BitbucketStepTriggererUUID         string `env:"BITBUCKET_STEP_TRIGGERER_UUID" yaml:":bitbucket_step_triggerer_uuid,omitempty"`
+	BitbucketStepOidcToken             string `env:"BITBUCKET_STEP_OIDC_TOKEN" yaml:":bitbucket_step_oidc_token,omitempty"`
+	BitbucketSshKeyFile                string `env:"BITBUCKET_SSH_KEY_FILE" yaml:":bitbucket_ssh_key_file,omitempty"`
+}
+
+func (w *bitbucketMetadata) Init(envs map[string]string, log logger.Logger) error {
+	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.BitbucketCommit)
+
+	return nil
+}
+
+func (w *bitbucketMetadata) Branch() string {
+	return w.BitbucketBranch
+}
+
+func (w *bitbucketMetadata) BuildURL() string {
+	return fmt.Sprintf("%s/addon/pipelines/home#!/results/%d", w.BitbucketGitHttpOrigin, w.BitbucketBuildNumber)
+}
+
+func (w *bitbucketMetadata) CommitSHA() string {
+	return w.BitbucketCommit
+}
+
+func (w *bitbucketMetadata) Name() string {
+	return "bitbucket.org"
+}
+
+func (w *bitbucketMetadata) RepoNameWithOwner() string {
+	return fmt.Sprintf("%s/%s", w.BitbucketWorkspace, w.BitbucketRepoSlug)
+}
+
+var _ providerMetadata = (*azurePipelinesMetadata)(nil)
+
+type azurePipelinesMetadata struct {
+	BuildID                        string `env:"BUILD_BUILDID" yaml:":build_buildid,omitempty"`
+	BuildNumber                    string `env:"BUILD_BUILDNUMBER" yaml:":build_buildnumber,omitempty"`
+	BuildURI                       string `env:"BUILD_BUILDURI" yaml:":build_builduri"`
+	BinariesDirectory              string `env:"BUILD_BINARIESDIRECTORY" yaml:":build_binariesdirectory,omitempty"`
+	ContainerID                    string `env:"BUILD_CONTAINERID" yaml:":build_containerid,omitempty"`
+	DefinitionName                 string `env:"BUILD_DEFINITIONNAME" yaml:":build_definitionname,omitempty"`
+	DefinitionVersion              string `env:"BUILD_DEFINITIONVERSION" yaml:":build_definitionversion,omitempty"`
+	QueuedBy                       string `env:"BUILD_QUEUEDBY" yaml:":build_queuedby,omitempty"`
+	QueuedByID                     string `env:"BUILD_QUEUEDBYID" yaml:":build_queuedbyid,omitempty"`
+	Reason                         string `env:"BUILD_REASON" yaml:":build_reason,omitempty"`
+	RepositoryClean                string `env:"BUILD_REPOSITORY_CLEAN" yaml:":build_repository_clean,omitempty"`
+	RepositoryLocalpath            string `env:"BUILD_REPOSITORY_LOCALPATH" yaml:":build_repository_localpath,omitempty"`
+	RepositoryID                   string `env:"BUILD_REPOSITORY_ID" yaml:":build_repository_id,omitempty"`
+	RepositoryName                 string `env:"BUILD_REPOSITORY_NAME" yaml:":build_repository_name"`
+	RepositoryProvider             string `env:"BUILD_REPOSITORY_PROVIDER" yaml:":build_repository_provider,omitempty"`
+	RepositoryTFVCWorkspace        string `env:"BUILD_REPOSITORY_TFVC_WORKSPACE" yaml:":build_repository_tfvc_workspace,omitempty"`
+	RepositoryURI                  string `env:"BUILD_REPOSITORY_URI" yaml:":build_repository_uri,omitempty"`
+	RequestedForEmail              string `env:"BUILD_REQUESTEDFOREMAIL" yaml:":build_requestedforemail,omitempty"`
+	RequestedForID                 string `env:"BUILD_REQUESTEDFORID" yaml:":build_requestedforid,omitempty"`
+	SourceBranch                   string `env:"BUILD_SOURCEBRANCH" yaml:":build_sourcebranch,omitempty"`
+	SourceBranchName               string `env:"BUILD_SOURCEBRANCHNAME" yaml:":build_sourcebranchname"`
+	SourcesDirectory               string `env:"BUILD_SOURCESDIRECTORY" yaml:":build_sourcesdirectory,omitempty"`
+	SourceVersion                  string `env:"BUILD_SOURCEVERSION" yaml:":build_sourceversion"`
+	SourceVersionMessage           string `env:"BUILD_SOURCEVERSIONMESSAGE" yaml:":build_sourceversionmessage,omitempty"`
+	StagingDirectory               string `env:"BUILD_STAGINGDIRECTORY" yaml:":build_stagingdirectory,omitempty"`
+	RepositoryGitSubmoduleCheckout string `env:"BUILD_REPOSITORY_GIT_SUBMODULECHECKOUT" yaml:":build_repository_git_submodulecheckout,omitempty"`
+	SourceTFVCShelveSet            string `env:"BUILD_SOURCETFVCSHELVESET" yaml:":build_sourcetfvcshelveset,omitempty"`
+	TeamFoundationCollectionUri    string `env:"SYSTEM_TEAMFOUNDATIONCOLLECTIONURI" yaml:":system_teamfoundationcollectionuri"`
+	TriggeredByBuildID             string `env:"BUILD_TRIGGEREDBY_BUILDID" yaml:":build_triggeredby_buildid,omitempty"`
+	TriggeredByDefinitionID        string `env:"BUILD_TRIGGEREDBY_DEFINITIONID" yaml:":build_triggeredby_definitionid,omitempty"`
+	TriggeredByDefinitionName      string `env:"BUILD_TRIGGEREDBY_DEFINITIONNAME" yaml:":build_triggeredby_definitionname,omitempty"`
+	TriggeredByBuildNumber         string `env:"BUILD_TRIGGEREDBY_BUILDNUMBER" yaml:":build_triggeredby_buildnumber,omitempty"`
+	TriggeredByProjectID           string `env:"BUILD_TRIGGEREDBY_PROJECTID" yaml:":build_triggeredby_projectid,omitempty"`
+}
+
+func (w *azurePipelinesMetadata) Init(envs map[string]string, log logger.Logger) error {
+	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.SourceVersion)
+
+	return nil
+}
+
+func (w *azurePipelinesMetadata) Branch() string {
+	return w.SourceBranchName
+}
+
+func (w *azurePipelinesMetadata) BuildURL() string {
+	return w.BuildURI
+}
+
+func (w *azurePipelinesMetadata) CommitSHA() string {
+	return w.SourceVersion
+}
+
+func (w *azurePipelinesMetadata) Name() string {
+	return "azure-pipelines"
+}
+
+func (w *azurePipelinesMetadata) RepoNameWithOwner() string {
+	if strings.Contains(w.RepositoryName, "/") {
+		return w.RepositoryName
+	}
+
+	return fmt.Sprintf("%s/%s", w.TeamFoundationCollectionUri, w.RepositoryName)
+}
+
+var _ providerMetadata = (*customMetadata)(nil)
+
+type customMetadata struct {
+	// Fields derived from webapp.io-specific environment variables
+	GitBranch        string `env:"GIT_BRANCH" yaml:":git_branch"`
+	GitCommit        string `env:"GIT_COMMIT" yaml:":git_commit"`
+	BuildURI         string `env:"BUILD_URL" yaml:":build_url"`
+	OrganizationName string `env:"ORGANIZATION_NAME" yaml:":organization_name"`
+	RepositoryName   string `env:"REPOSITORY_NAME" yaml:":repository_name"`
+}
+
+func (w *customMetadata) Init(envs map[string]string, log logger.Logger) error {
+	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
+		return err
+	}
+
+	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.GitCommit)
+
+	return nil
+}
+
+func (w *customMetadata) Branch() string {
+	return w.GitBranch
+}
+
+func (w *customMetadata) BuildURL() string {
+	return w.BuildURI
+}
+
+func (w *customMetadata) CommitSHA() string {
+	return w.GitCommit
+}
+
+func (w *customMetadata) Name() string {
+	return "custom"
+}
+
+func (w *customMetadata) RepoNameWithOwner() string {
+	return fmt.Sprintf("%s/%s", w.OrganizationName, w.RepositoryName)
 }
