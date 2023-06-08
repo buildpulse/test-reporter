@@ -53,7 +53,7 @@ jobs:
   golangci-lint:
     name: Lint
 
-    runs-on: ubuntu-latest-16-cores
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v2
@@ -63,6 +63,8 @@ jobs:
         with:
           version: v1.50
           args: --timeout=3m
+        env:
+          GOGC: 30
 
   govulncheck:
     name: Vulnerability check
