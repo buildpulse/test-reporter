@@ -12,9 +12,22 @@ brew install goreleaser/tap/goreleaser upx
 ```
 
 ## Build
+The following will build the binary.
 ```
 ./script/build-snapshot
 ```
+
+The binary can be found in `./dist`. The following platforms + architectures are supported:
+
+- Darwin / Mac OS (amd64, arm64)
+- Windows (amd64)
+- Linux (amd64, arm64)
+  - Ubuntu
+  - Debian
+  - Fedora
+  - CentOS
+  - RedHat
+  - Alpine
 
 ## Natively Supported CI Providers
 We are able to infer the required environment variables from the following CI providers:
@@ -42,15 +55,16 @@ To use `test-reporter` with another CI provider, the following environment varia
 | `ORGANIZATION_NAME`  | Name of the Github organization                                    |
 | `REPOSITORY_NAME`    | Name of the repository                                             |
 
+Example:
 ```
-BUILDPULSE_ACCESS_KEY_ID="${INPUT_KEY}" \
-BUILDPULSE_SECRET_ACCESS_KEY="${INPUT_SECRET}" \
-GIT_COMMIT="${GIT_COMMIT}" \
-GIT_BRANCH="${GIT_BRANCH}" \
-BUILD_URL="${BUILD_URL}" \
-ORGANIZATION_NAME="${ORGANIZATION_NAME}" \
-REPOSITORY_NAME="${REPOSITORY_NAME}" \
-./buildpulse-test-reporter submit $REPORT_PATH --account-id $ACCOUNT_ID --repository-id $REPOSITORY_ID --repository-dir "${REPOSITORY_PATH}"
+BUILDPULSE_ACCESS_KEY_ID=$INPUT_KEY \
+BUILDPULSE_SECRET_ACCESS_KEY=$INPUT_SECRET \
+GIT_COMMIT=$GIT_COMMIT \
+GIT_BRANCH=$GIT_BRANCH \
+BUILD_URL=$BUILD_URL \
+ORGANIZATION_NAME=$ORGANIZATION_NAME \
+REPOSITORY_NAME=$REPOSITORY_NAME \
+./buildpulse-test-reporter submit $REPORT_PATH --account-id $ACCOUNT_ID --repository-id $REPOSITORY_ID --repository-dir $REPOSITORY_PATH
 ```
 
 [buildpulse.io]: https://buildpulse.io?utm_source=github.com&utm_campaign=tool-repositories&utm_content=test-reporter-text-link

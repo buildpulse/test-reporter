@@ -497,21 +497,21 @@ type awsCodeBuildMetadata struct {
 	AwsDefaultRegion               string `env:"AWS_DEFAULT_REGION" yaml:":aws_default_region,omitempty"`
 	AwsRegion                      string `env:"AWS_REGION" yaml:":aws_region,omitempty"`
 	CodebuildBatchBuildIdentifier  string `env:"CODEBUILD_BATCH_BUILD_IDENTIFIER" yaml:":codebuild_batch_build_identifier,omitempty"`
-	CodebuildBuildArn              string `env:"CODEBUILD_BUILD_ARN" yaml:":codebuild_build_arn,omitempty"`
-	CodebuildBuildId               string `env:"CODEBUILD_BUILD_ID" yaml:":codebuild_build_id,omitempty"`
+	CodebuildBuildARN              string `env:"CODEBUILD_BUILD_ARN" yaml:":codebuild_build_arn,omitempty"`
+	CodebuildBuildID               string `env:"CODEBUILD_BUILD_ID" yaml:":codebuild_build_id,omitempty"`
 	CodebuildBuildImage            string `env:"CODEBUILD_BUILD_IMAGE" yaml:":codebuild_build_image,omitempty"`
 	CodebuildBuildNumber           uint   `env:"CODEBUILD_BUILD_NUMBER" yaml:":codebuild_build_number,omitempty"`
 	CodebuildBuildSucceeding       uint   `env:"CODEBUILD_BUILD_SUCCEEDING" yaml:":codebuild_build_succeeding,omitempty"`
 	CodebuildInitiator             string `env:"CODEBUILD_INITIATOR" yaml:":codebuild_initiator,omitempty"`
-	CodebuildKmsKeyId              string `env:"CODEBUILD_KMS_KEY_ID" yaml:":codebuild_kms_key_id,omitempty"`
+	CodebuildKmsKeyID              string `env:"CODEBUILD_KMS_KEY_ID" yaml:":codebuild_kms_key_id,omitempty"`
 	CodebuildLogPath               string `env:"CODEBUILD_LOG_PATH" yaml:":codebuild_log_path,omitempty"`
-	CodebuildPublicBuildUrl        string `env:"CODEBUILD_PUBLIC_BUILD_URL" yaml:":codebuild_public_build_url"`
+	CodebuildPublicBuildURL        string `env:"CODEBUILD_PUBLIC_BUILD_URL" yaml:":codebuild_public_build_url"`
 	CodebuildResolvedSourceVersion string `env:"CODEBUILD_RESOLVED_SOURCE_VERSION" yaml:":codebuild_resolved_source_version"`
-	CodebuildSourceRepoUrl         string `env:"CODEBUILD_SOURCE_REPO_URL" yaml:":codebuild_source_repo_url,omitempty"`
+	CodebuildSourceRepoURL         string `env:"CODEBUILD_SOURCE_REPO_URL" yaml:":codebuild_source_repo_url,omitempty"`
 	CodebuildSourceVersion         string `env:"CODEBUILD_SOURCE_VERSION" yaml:":codebuild_source_version"`
 	CodebuildSrcDir                string `env:"CODEBUILD_SRC_DIR" yaml:":codebuild_src_dir,omitempty"`
 	CodebuildStartTime             string `env:"CODEBUILD_START_TIME" yaml:":codebuild_start_time,omitempty"`
-	CodebuildWebhookActorAccountId string `env:"CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID" yaml:":codebuild_webhook_actor_account_id,omitempty"`
+	CodebuildWebhookActorAccountID string `env:"CODEBUILD_WEBHOOK_ACTOR_ACCOUNT_ID" yaml:":codebuild_webhook_actor_account_id,omitempty"`
 	CodebuildWebhookBaseRef        string `env:"CODEBUILD_WEBHOOK_BASE_REF" yaml:":codebuild_webhook_base_ref,omitempty"`
 	CodebuildWebhookEvent          string `env:"CODEBUILD_WEBHOOK_EVENT" yaml:":codebuild_webhook_event,omitempty"`
 	CodebuildWebhookMergeCommit    string `env:"CODEBUILD_WEBHOOK_MERGE_COMMIT" yaml:":codebuild_webhook_merge_commit,omitempty"`
@@ -535,7 +535,7 @@ func (l *awsCodeBuildMetadata) Branch() string {
 }
 
 func (l *awsCodeBuildMetadata) BuildURL() string {
-	return l.CodebuildPublicBuildUrl
+	return l.CodebuildPublicBuildURL
 }
 
 func (l *awsCodeBuildMetadata) CommitSHA() string {
@@ -547,15 +547,14 @@ func (l *awsCodeBuildMetadata) Name() string {
 }
 
 func (l *awsCodeBuildMetadata) RepoNameWithOwner() string {
-	parsedUrl, err := url.Parse(l.BuildURL())
-
+	parsedURL, err := url.Parse(l.BuildURL())
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	// Splitting the Path to get the Owner and Repo name
-	splits := strings.Split(parsedUrl.Path, "/")
+	splits := strings.Split(parsedURL.Path, "/")
 	owner := splits[1]
 	repoName := strings.TrimSuffix(splits[2], ".git")
 
@@ -577,9 +576,9 @@ type bitbucketMetadata struct {
 	BitbucketBookmark                  string `env:"BITBUCKET_BOOKMARK" yaml:":bitbucket_bookmark,omitempty"`
 	BitbucketParallelStep              string `env:"BITBUCKET_PARALLEL_STEP" yaml:":bitbucket_parallel_step,omitempty"`
 	BitbucketParallelStepCount         string `env:"BITBUCKET_PARALLEL_STEP_COUNT" yaml:":bitbucket_parallel_step_count,omitempty"`
-	BitbucketPrId                      string `env:"BITBUCKET_PR_ID" yaml:":bitbucket_pr_id,omitempty"`
+	BitbucketPrID                      string `env:"BITBUCKET_PR_ID" yaml:":bitbucket_pr_id,omitempty"`
 	BitbucketPrDestinationBranch       string `env:"BITBUCKET_PR_DESTINATION_BRANCH" yaml:":bitbucket_pr_destination_branch,omitempty"`
-	BitbucketGitHttpOrigin             string `env:"BITBUCKET_GIT_HTTP_ORIGIN" yaml:":bitbucket_git_http_origin"`
+	BitbucketGitHTTPOrigin             string `env:"BITBUCKET_GIT_HTTP_ORIGIN" yaml:":bitbucket_git_http_origin"`
 	BitbucketGitSSHOrigin              string `env:"BITBUCKET_GIT_SSH_ORIGIN" yaml:":bitbucket_git_ssh_origin,omitempty"`
 	BitbucketExitCode                  string `env:"BITBUCKET_EXIT_CODE" yaml:":bitbucket_exit_code,omitempty"`
 	BitbucketStepUUID                  string `env:"BITBUCKET_STEP_UUID" yaml:":bitbucket_step_uuid,omitempty"`
@@ -589,8 +588,8 @@ type bitbucketMetadata struct {
 	BitbucketProjectKey                string `env:"BITBUCKET_PROJECT_KEY" yaml:":bitbucket_project_key,omitempty"`
 	BitbucketProjectUUID               string `env:"BITBUCKET_PROJECT_UUID" yaml:":bitbucket_project_uuid,omitempty"`
 	BitbucketStepTriggererUUID         string `env:"BITBUCKET_STEP_TRIGGERER_UUID" yaml:":bitbucket_step_triggerer_uuid,omitempty"`
-	BitbucketStepOidcToken             string `env:"BITBUCKET_STEP_OIDC_TOKEN" yaml:":bitbucket_step_oidc_token,omitempty"`
-	BitbucketSshKeyFile                string `env:"BITBUCKET_SSH_KEY_FILE" yaml:":bitbucket_ssh_key_file,omitempty"`
+	BitbucketStepOIDCToken             string `env:"BITBUCKET_STEP_OIDC_TOKEN" yaml:":bitbucket_step_oidc_token,omitempty"`
+	BitbucketSSHKeyFile                string `env:"BITBUCKET_SSH_KEY_FILE" yaml:":bitbucket_ssh_key_file,omitempty"`
 }
 
 func (w *bitbucketMetadata) Init(envs map[string]string, log logger.Logger) error {
@@ -608,7 +607,7 @@ func (w *bitbucketMetadata) Branch() string {
 }
 
 func (w *bitbucketMetadata) BuildURL() string {
-	return fmt.Sprintf("%s/addon/pipelines/home#!/results/%d", w.BitbucketGitHttpOrigin, w.BitbucketBuildNumber)
+	return fmt.Sprintf("%s/addon/pipelines/home#!/results/%d", w.BitbucketGitHTTPOrigin, w.BitbucketBuildNumber)
 }
 
 func (w *bitbucketMetadata) CommitSHA() string {
@@ -653,7 +652,7 @@ type azurePipelinesMetadata struct {
 	StagingDirectory               string `env:"BUILD_STAGINGDIRECTORY" yaml:":build_stagingdirectory,omitempty"`
 	RepositoryGitSubmoduleCheckout string `env:"BUILD_REPOSITORY_GIT_SUBMODULECHECKOUT" yaml:":build_repository_git_submodulecheckout,omitempty"`
 	SourceTFVCShelveSet            string `env:"BUILD_SOURCETFVCSHELVESET" yaml:":build_sourcetfvcshelveset,omitempty"`
-	TeamFoundationCollectionUri    string `env:"SYSTEM_TEAMFOUNDATIONCOLLECTIONURI" yaml:":system_teamfoundationcollectionuri"`
+	TeamFoundationCollectionURI    string `env:"SYSTEM_TEAMFOUNDATIONCOLLECTIONURI" yaml:":system_teamfoundationcollectionuri"`
 	TriggeredByBuildID             string `env:"BUILD_TRIGGEREDBY_BUILDID" yaml:":build_triggeredby_buildid,omitempty"`
 	TriggeredByDefinitionID        string `env:"BUILD_TRIGGEREDBY_DEFINITIONID" yaml:":build_triggeredby_definitionid,omitempty"`
 	TriggeredByDefinitionName      string `env:"BUILD_TRIGGEREDBY_DEFINITIONNAME" yaml:":build_triggeredby_definitionname,omitempty"`
@@ -692,7 +691,7 @@ func (w *azurePipelinesMetadata) RepoNameWithOwner() string {
 		return w.RepositoryName
 	}
 
-	return fmt.Sprintf("%s/%s", w.TeamFoundationCollectionUri, w.RepositoryName)
+	return fmt.Sprintf("%s/%s", w.TeamFoundationCollectionURI, w.RepositoryName)
 }
 
 var _ providerMetadata = (*customMetadata)(nil)
