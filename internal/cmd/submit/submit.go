@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -92,7 +91,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
-	s.fs.SetOutput(ioutil.Discard) // Disable automatic writing to STDERR
+	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
 	s.logger.Println("Initiating `submit`")
@@ -242,7 +241,7 @@ func (s *Submit) bundle() (string, error) {
 		return "", err
 	}
 
-	yamlfile, err := ioutil.TempFile("", "buildpulse-*.yml")
+	yamlfile, err := os.CreateTemp("", "buildpulse-*.yml")
 	if err != nil {
 		return "", err
 	}
@@ -257,7 +256,7 @@ func (s *Submit) bundle() (string, error) {
 	// Initialize the tarfile for writing
 	//////////////////////////////////////////////////////////////////////////////
 
-	f, err := ioutil.TempFile("", "buildpulse-*.tar")
+	f, err := os.CreateTemp("", "buildpulse-*.tar")
 	if err != nil {
 		return "", err
 	}
@@ -290,7 +289,7 @@ func (s *Submit) bundle() (string, error) {
 	// Write the log to the tarfile
 	//////////////////////////////////////////////////////////////////////////////
 
-	logfile, err := ioutil.TempFile("", "buildpulse-*.log")
+	logfile, err := os.CreateTemp("", "buildpulse-*.log")
 	if err != nil {
 		return "", err
 	}
@@ -330,7 +329,7 @@ func toGz(src string) (dest string, err error) {
 		return "", err
 	}
 
-	zipfile, err := ioutil.TempFile("", "buildpulse-*.gz")
+	zipfile, err := os.CreateTemp("", "buildpulse-*.gz")
 	if err != nil {
 		return "", err
 	}

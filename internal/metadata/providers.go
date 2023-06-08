@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -698,16 +699,16 @@ var _ providerMetadata = (*customMetadata)(nil)
 
 type customMetadata struct {
 	// Fields derived from webapp.io-specific environment variables
-	GitBranch        string `env:"GIT_BRANCH" yaml:":git_branch"`
-	GitCommit        string `env:"GIT_COMMIT" yaml:":git_commit"`
-	BuildURI         string `env:"BUILD_URL" yaml:":build_url"`
-	OrganizationName string `env:"ORGANIZATION_NAME" yaml:":organization_name"`
-	RepositoryName   string `env:"REPOSITORY_NAME" yaml:":repository_name"`
+	GitBranch        string `env:"GIT_BRANCH,notEmpty" yaml:":git_branch"`
+	GitCommit        string `env:"GIT_COMMIT,notEmpty" yaml:":git_commit"`
+	BuildURI         string `env:"BUILD_URL,notEmpty" yaml:":build_url"`
+	OrganizationName string `env:"ORGANIZATION_NAME,notEmpty" yaml:":organization_name"`
+	RepositoryName   string `env:"REPOSITORY_NAME,notEmpty" yaml:":repository_name"`
 }
 
 func (w *customMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
-		return err
+		return errors.New("missing required environment variables")
 	}
 
 	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.GitCommit)
