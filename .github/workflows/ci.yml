@@ -64,7 +64,7 @@ jobs:
           version: v1.50
           args: --timeout=3m
         env:
-          GOGC: 30
+          GOGC: off
 
   govulncheck:
     name: Vulnerability check
