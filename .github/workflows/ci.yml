@@ -62,9 +62,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           version: v1.50
-          args: --timeout=3m
-        env:
-          GOGC: off
+          args: --timeout=3m --concurrency 1
 
   govulncheck:
     name: Vulnerability check
