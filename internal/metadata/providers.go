@@ -65,7 +65,7 @@ type buildkiteMetadata struct {
 	// Fields derived from Buildkite-specific environment variables
 	BuildkiteBranch                 string `env:"BUILDKITE_BRANCH" yaml:"-"`
 	BuildkiteBuildID                string `env:"BUILDKITE_BUILD_ID" yaml:":buildkite_build_id"`
-	BuildkiteBuildNumber            uint   `env:"BUILDKITE_BUILD_NUMBER" yaml:":buildkite_build_number"`
+	BuildkiteBuildNumber            uint64 `env:"BUILDKITE_BUILD_NUMBER" yaml:":buildkite_build_number"`
 	BuildkiteBuildURL               string `env:"BUILDKITE_BUILD_URL" yaml:"-"`
 	BuildkiteCommit                 string `env:"BUILDKITE_COMMIT" yaml:"-"`
 	BuildkiteJobID                  string `env:"BUILDKITE_JOB_ID" yaml:":buildkite_job_id"`
@@ -79,7 +79,7 @@ type buildkiteMetadata struct {
 	BuildkitePullRequestNumber      uint   `yaml:":buildkite_pull_request_number,omitempty"`
 	BuildkitePullRequestRepo        string `env:"BUILDKITE_PULL_REQUEST_REPO" yaml:":buildkite_pull_request_repo,omitempty"`
 	BuildkiteRebuiltFromBuildID     string `env:"BUILDKITE_REBUILT_FROM_BUILD_ID" yaml:":buildkite_rebuilt_from_build_id,omitempty"`
-	BuildkiteRebuiltFromBuildNumber uint   `env:"BUILDKITE_REBUILT_FROM_BUILD_NUMBER" yaml:":buildkite_rebuilt_from_build_number,omitempty"`
+	BuildkiteRebuiltFromBuildNumber uint64 `env:"BUILDKITE_REBUILT_FROM_BUILD_NUMBER" yaml:":buildkite_rebuilt_from_build_number,omitempty"`
 	BuildkiteRepoURL                string `env:"BUILDKITE_REPO" yaml:"-"`
 	BuildkiteRetryCount             uint   `env:"BUILDKITE_RETRY_COUNT" yaml:":buildkite_retry_count"`
 	BuildkiteTag                    string `env:"BUILDKITE_TAG" yaml:":buildkite_tag,omitempty"`
@@ -131,7 +131,7 @@ func (b *buildkiteMetadata) RepoNameWithOwner() string {
 type circleMetadata struct {
 	// Fields derived from Circle-specific environment variables
 	CircleBranch              string `env:"CIRCLE_BRANCH" yaml:"-"`
-	CircleBuildNumber         uint   `env:"CIRCLE_BUILD_NUM" yaml:":circle_build_num"`
+	CircleBuildNumber         uint64 `env:"CIRCLE_BUILD_NUM" yaml:":circle_build_num"`
 	CircleBuildURL            string `env:"CIRCLE_BUILD_URL" yaml:"-"`
 	CircleJob                 string `env:"CIRCLE_JOB" yaml:":circle_job"`
 	CircleProjectReponame     string `env:"CIRCLE_PROJECT_REPONAME" yaml:"-"`
@@ -256,7 +256,7 @@ type jenkinsMetadata struct {
 	GitBranch             string `env:"GIT_BRANCH" yaml:"-"`
 	GitCommit             string `env:"GIT_COMMIT" yaml:"-"`
 	GitURL                string `env:"GIT_URL" yaml:"-"`
-	JenkinsExecutorNumber uint   `env:"EXECUTOR_NUMBER" yaml:":jenkins_executor_number"`
+	JenkinsExecutorNumber uint64 `env:"EXECUTOR_NUMBER" yaml:":jenkins_executor_number"`
 	JenkinsJobName        string `env:"JOB_NAME" yaml:":jenkins_job_name"`
 	JenkinsJobURL         string `env:"JOB_URL" yaml:":jenkins_job_url"`
 	JenkinsNodeName       string `env:"NODE_NAME" yaml:":jenkins_node_name"`
@@ -330,7 +330,7 @@ type semaphoreMetadata struct {
 	SemaphoreProjectID                   string `env:"SEMAPHORE_PROJECT_ID" yaml:":semaphore_project_id"`
 	SemaphoreProjectName                 string `env:"SEMAPHORE_PROJECT_NAME" yaml:":semaphore_project_name"`
 	SemaphoreWorkflowID                  string `env:"SEMAPHORE_WORKFLOW_ID" yaml:":semaphore_workflow_id"`
-	SemaphoreWorkflowNumber              uint   `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
+	SemaphoreWorkflowNumber              uint64 `env:"SEMAPHORE_WORKFLOW_NUMBER" yaml:":semaphore_workflow_number"`
 }
 
 func (s *semaphoreMetadata) Init(envs map[string]string, log logger.Logger) error {
@@ -369,15 +369,15 @@ type travisMetadata struct {
 	// Fields derived from Travis-specific environment variables
 	TravisBranch            string `env:"TRAVIS_BRANCH" yaml:"-"`
 	TravisBuildDir          string `env:"TRAVIS_BUILD_DIR" yaml:":travis_build_dir"`
-	TravisBuildID           uint   `env:"TRAVIS_BUILD_ID" yaml:":travis_build_id"`
-	TravisBuildNumber       uint   `env:"TRAVIS_BUILD_NUMBER" yaml:":travis_build_number"`
+	TravisBuildID           uint64 `env:"TRAVIS_BUILD_ID" yaml:":travis_build_id"`
+	TravisBuildNumber       uint64 `env:"TRAVIS_BUILD_NUMBER" yaml:":travis_build_number"`
 	TravisBuildWebURL       string `env:"TRAVIS_BUILD_WEB_URL" yaml:":travis_build_web_url"`
 	TravisCommit            string `env:"TRAVIS_COMMIT" yaml:"-"`
 	TravisCommitRange       string `env:"TRAVIS_COMMIT_RANGE" yaml:":travis_commit_range"`
 	TravisCPUArch           string `env:"TRAVIS_CPU_ARCH" yaml:":travis_cpu_arch"`
 	TravisDist              string `env:"TRAVIS_DIST" yaml:":travis_dist"`
 	TravisEventType         string `env:"TRAVIS_EVENT_TYPE" yaml:":travis_event_type"`
-	TravisJobID             uint   `env:"TRAVIS_JOB_ID" yaml:":travis_job_id"`
+	TravisJobID             uint64 `env:"TRAVIS_JOB_ID" yaml:":travis_job_id"`
 	TravisJobName           string `env:"TRAVIS_JOB_NAME" yaml:":travis_job_name"`
 	TravisJobNumber         string `env:"TRAVIS_JOB_NUMBER" yaml:":travis_job_number"`
 	TravisJobWebURL         string `env:"TRAVIS_JOB_WEB_URL" yaml:"-"`
@@ -445,7 +445,7 @@ type webappioMetadata struct {
 	// Fields derived from webapp.io-specific environment variables
 	GitBranch        string `env:"GIT_BRANCH" yaml:"-"`
 	GitCommit        string `env:"GIT_COMMIT" yaml:"-"`
-	JobID            uint   `env:"JOB_ID" yaml:"-"`
+	JobID            uint64 `env:"JOB_ID" yaml:"-"`
 	PullRequestURL   string `env:"PULL_REQUEST_URL" yaml:":pull_request_url,omitempty"`
 	OrganizationName string `env:"ORGANIZATION_NAME" yaml:"-"`
 	RepositoryName   string `env:"REPOSITORY_NAME" yaml:"-"`
@@ -500,7 +500,7 @@ type awsCodeBuildMetadata struct {
 	CodebuildBuildARN              string `env:"CODEBUILD_BUILD_ARN" yaml:":codebuild_build_arn,omitempty"`
 	CodebuildBuildID               string `env:"CODEBUILD_BUILD_ID" yaml:":codebuild_build_id,omitempty"`
 	CodebuildBuildImage            string `env:"CODEBUILD_BUILD_IMAGE" yaml:":codebuild_build_image,omitempty"`
-	CodebuildBuildNumber           uint   `env:"CODEBUILD_BUILD_NUMBER" yaml:":codebuild_build_number,omitempty"`
+	CodebuildBuildNumber           uint64 `env:"CODEBUILD_BUILD_NUMBER" yaml:":codebuild_build_number,omitempty"`
 	CodebuildBuildSucceeding       uint   `env:"CODEBUILD_BUILD_SUCCEEDING" yaml:":codebuild_build_succeeding,omitempty"`
 	CodebuildInitiator             string `env:"CODEBUILD_INITIATOR" yaml:":codebuild_initiator,omitempty"`
 	CodebuildKmsKeyID              string `env:"CODEBUILD_KMS_KEY_ID" yaml:":codebuild_kms_key_id,omitempty"`
@@ -564,7 +564,7 @@ func (l *awsCodeBuildMetadata) RepoNameWithOwner() string {
 var _ providerMetadata = (*bitbucketMetadata)(nil)
 
 type bitbucketMetadata struct {
-	BitbucketBuildNumber               uint   `env:"BITBUCKET_BUILD_NUMBER" yaml:":bitbucket_build_number"`
+	BitbucketBuildNumber               uint64 `env:"BITBUCKET_BUILD_NUMBER" yaml:":bitbucket_build_number"`
 	BitbucketCloneDir                  string `env:"BITBUCKET_CLONE_DIR" yaml:":bitbucket_clone_dir,omitempty"`
 	BitbucketCommit                    string `env:"BITBUCKET_COMMIT" yaml:":bitbucket_commit"`
 	BitbucketWorkspace                 string `env:"BITBUCKET_WORKSPACE" yaml:":bitbucket_workspace"`
