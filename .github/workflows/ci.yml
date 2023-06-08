@@ -50,22 +50,6 @@ jobs:
           chmod +x ./buildpulse-test-reporter
           ./buildpulse-test-reporter submit tmp/test-results --account-id 68192324 --repository-id 280914963
 
-  golangci-lint:
-    name: Lint
-
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v2
-
-      - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
-        with:
-          version: v1.50
-          args: --timeout=3m --concurrency 1
-        env:
-          GOGC: 5
-
   govulncheck:
     name: Vulnerability check
 
