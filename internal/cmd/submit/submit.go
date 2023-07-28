@@ -21,6 +21,7 @@ import (
 	"github.com/buildpulse/test-reporter/internal/metadata"
 	"github.com/buildpulse/test-reporter/internal/tar"
 	"github.com/google/uuid"
+	"github.com/yargevad/filepathx"
 )
 
 type credentials struct {
@@ -66,15 +67,17 @@ type Submit struct {
 	logger  logger.Logger
 	version *metadata.Version
 
-	envs           map[string]string
-	paths          []string
-	bucket         string
-	accountID      uint64
-	repositoryID   uint64
-	repositoryPath string
-	tree           string
-	credentials    credentials
-	commitResolver metadata.CommitResolver
+	envs                map[string]string
+	paths               []string
+	coveragePathsString string
+	coveragePaths       []string
+	bucket              string
+	accountID           uint64
+	repositoryID        uint64
+	repositoryPath      string
+	tree                string
+	credentials         credentials
+	commitResolver      metadata.CommitResolver
 }
 
 // NewSubmit creates a new Submit instance.
@@ -91,6 +94,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
+	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files or directories containing coverage files")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
@@ -146,6 +150,10 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 
 	if s.repositoryID == 0 {
 		return fmt.Errorf("missing required flag: -repository-id")
+	}
+
+	if len(s.coveragePathsString) > 0 {
+		s.coveragePaths = strings.Split(s.coveragePathsString, " ")
 	}
 
 	id, ok := envs["BUILDPULSE_ACCESS_KEY_ID"]
@@ -271,9 +279,27 @@ func (s *Submit) bundle() (string, error) {
 	s.logger.Printf("Preparing tarball of test results:")
 	for _, p := range s.paths {
 		s.logger.Printf("- %s", p)
-		err = t.Write(p, p)
+		internalPath := fmt.Sprintf("test_results/%s", p)
+		err = t.Write(p, internalPath)
 		if err != nil {
 			return "", err
+		}
+	}
+
+	// if coverage file paths are not provided, we infer them
+	var coveragePaths = s.coveragePaths
+	if len(coveragePaths) == 0 {
+		coveragePaths, err = coveragePathsInferred()
+	}
+
+	if err == nil && len(coveragePaths) > 0 {
+		for _, p := range coveragePaths {
+			internalPath := fmt.Sprintf("coverage/%s", p)
+			s.logger.Printf("- %s", p)
+			err = t.Write(p, internalPath)
+			if err != nil {
+				return "", err
+			}
 		}
 	}
 
@@ -424,6 +450,50 @@ func xmlPathsFromArgs(args []string) ([]string, error) {
 	}
 
 	return paths, nil
+}
+
+func globPatternFromPattern(pattern string) string {
+	return fmt.Sprintf("./**/%s", pattern)
+}
+
+func coveragePathsInferred() ([]string, error) {
+	coverageFileTypes := []string{
+		"*coverage*.*",
+		"nosetests.xml",
+		"jacoco*.xml",
+		"clover.xml",
+		"report.xml",
+		"*.codecov.!(exe)",
+		"codecov.!(exe)",
+		"*cobertura.xml",
+		"excoveralls.json",
+		"luacov.report.out",
+		"coverage-final.json",
+		"naxsi.info",
+		"lcov.info",
+		"lcov.dat",
+		"*.lcov",
+		"*.clover",
+		"cover.out",
+		"gcov.info",
+		"*.gcov",
+		"*.lst",
+		"test_cov.xml",
+	}
+
+	filePaths := []string{}
+	for _, filePattern := range coverageFileTypes {
+		fullPattern := globPatternFromPattern(filePattern)
+		candidates, err := filepathx.Glob(fullPattern)
+
+		if err != nil {
+			return []string{}, err
+		}
+
+		filePaths = append(filePaths, candidates...)
+	}
+
+	return filePaths, nil
 }
 
 // xmlPathsFromDir returns a list of all the XML files in the given directory
