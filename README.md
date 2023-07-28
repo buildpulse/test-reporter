@@ -55,6 +55,15 @@ To use `test-reporter` with another CI provider, the following environment varia
 | `ORGANIZATION_NAME`  | Name of the Github organization                                    |
 | `REPOSITORY_NAME`    | Name of the repository                                             |
 
+The following are flags that can be set. Make sure to **set flags after CLI args**.
+| Environment Variable | Required                         | Description                                  |
+|----------------------|----------------------------------|----------------------------------------------|
+| `account-id`         |   ✓                              | BuildPulse account ID (see dashboard)        |
+| `repository-id`      |   ✓                              | BuildPulse repository ID (see dashboard)     |
+| `repository-dir`     | Only if `tree` not set           | Path to repository directory                 |
+| `tree`               | Only if `repository-dir` not set | Git tree SHA                                 |
+| `coverage-files`     | If using BuildPulse Coverage     | **Space-separated** paths to coverage files. |
+
 Example:
 ```
 BUILDPULSE_ACCESS_KEY_ID=$INPUT_KEY \

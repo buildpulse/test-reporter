@@ -374,6 +374,29 @@ func TestSubmit_Init_invalidRepoPath(t *testing.T) {
 			assert.Regexp(t, "invalid value for flag -repository-dir: .* is not a directory", err.Error())
 		}
 	})
+
+	t.Run("WithCoveragePathString", func(t *testing.T) {
+		tmpfile, err := os.CreateTemp(os.TempDir(), "buildpulse-cli-test-fixture")
+		require.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err = s.Init([]string{
+			".",
+			"--account-id", "42",
+			"--repository-id", "8675309",
+			"--repository-dir", tmpfile.Name(),
+			"--coverage-files", "./dir1/**/*.xml ./dir2/**/*.xml",
+		},
+			exampleEnv,
+			&stubCommitResolverFactory{},
+		)
+		if assert.Error(t, err) {
+			assert.Regexp(t, "invalid value for flag -repository-dir: .* is not a directory", err.Error())
+		}
+
+		assert.Equal(t, s.coveragePaths, []string{"./dir1/**/*.xml", "./dir2/**/*.xml"})
+	})
 }
 
 func TestSubmit_Run(t *testing.T) {
@@ -412,48 +435,117 @@ func TestSubmit_Run(t *testing.T) {
 }
 
 func Test_bundle(t *testing.T) {
-	envs := map[string]string{
-		"GITHUB_ACTIONS": "true",
-		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
-	}
+	t.Run("bundle with coverage files provided", func(t *testing.T) {
+		envs := map[string]string{
+			"GITHUB_ACTIONS": "true",
+			"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+		}
 
-	log := logger.New()
-	s := &Submit{
-		logger:         log,
-		version:        &metadata.Version{Number: "v1.2.3"},
-		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
-		envs:           envs,
-		paths:          []string{"testdata/example-reports-dir/example-1.xml"},
-		bucket:         "buildpulse-uploads",
-		accountID:      42,
-		repositoryID:   8675309,
-	}
+		log := logger.New()
+		s := &Submit{
+			logger:         log,
+			version:        &metadata.Version{Number: "v1.2.3"},
+			commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+			envs:           envs,
+			paths:          []string{"testdata/example-reports-dir/example-1.xml"},
+			coveragePaths:  []string{"testdata/example-reports-dir/coverage-files/report.xml", "testdata/example-reports-dir/coverage-files/report-2.xml"},
+			bucket:         "buildpulse-uploads",
+			accountID:      42,
+			repositoryID:   8675309,
+		}
 
-	path, err := s.bundle()
-	require.NoError(t, err)
+		path, err := s.bundle()
+		require.NoError(t, err)
 
-	unzipDir := t.TempDir()
-	err = archiver.Unarchive(path, unzipDir)
-	require.NoError(t, err)
+		unzipDir := t.TempDir()
+		err = archiver.Unarchive(path, unzipDir)
+		require.NoError(t, err)
 
-	// Verify buildpulse.yml is present and contains expected content
-	yaml, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
-	require.NoError(t, err)
-	assert.Contains(t, string(yaml), ":ci_provider: github-actions")
-	assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
-	assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
-	assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
+		// Verify buildpulse.yml is present and contains expected content
+		yaml, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
+		require.NoError(t, err)
+		assert.Contains(t, string(yaml), ":ci_provider: github-actions")
+		assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
+		assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
+		assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
 
-	// Verify test report XML file is present and contains expected content
-	assertEqualContent(t,
-		"testdata/example-reports-dir/example-1.xml",
-		filepath.Join(unzipDir, "testdata/example-reports-dir/example-1.xml"),
-	)
+		// Verify test report XML file is present and contains expected content
+		assertEqualContent(t,
+			"testdata/example-reports-dir/example-1.xml",
+			filepath.Join(unzipDir, "test_results/testdata/example-reports-dir/example-1.xml"),
+		)
 
-	// Verify buildpulse.log is present and contains expected content
-	logdata, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
-	require.NoError(t, err)
-	assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
+		// Verify coverage files are present and contains expected content
+		assertEqualContent(t,
+			"testdata/example-reports-dir/coverage-files/report.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report.xml"),
+		)
+
+		assertEqualContent(t,
+			"testdata/example-reports-dir/coverage-files/report-2.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report-2.xml"),
+		)
+
+		// Verify buildpulse.log is present and contains expected content
+		logdata, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
+		require.NoError(t, err)
+		assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
+	})
+
+	t.Run("bundle with no coverage files provided (inferred)", func(t *testing.T) {
+		envs := map[string]string{
+			"GITHUB_ACTIONS": "true",
+			"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+		}
+
+		log := logger.New()
+		s := &Submit{
+			logger:         log,
+			version:        &metadata.Version{Number: "v1.2.3"},
+			commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+			envs:           envs,
+			paths:          []string{"testdata/example-reports-dir/example-1.xml"},
+			bucket:         "buildpulse-uploads",
+			accountID:      42,
+			repositoryID:   8675309,
+		}
+
+		path, err := s.bundle()
+		require.NoError(t, err)
+
+		unzipDir := t.TempDir()
+		err = archiver.Unarchive(path, unzipDir)
+		require.NoError(t, err)
+
+		// Verify buildpulse.yml is present and contains expected content
+		yaml, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
+		require.NoError(t, err)
+		assert.Contains(t, string(yaml), ":ci_provider: github-actions")
+		assert.Contains(t, string(yaml), ":commit: aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb")
+		assert.Contains(t, string(yaml), ":tree: ccccccccccccccccccccdddddddddddddddddddd")
+		assert.Contains(t, string(yaml), ":reporter_version: v1.2.3")
+
+		// Verify test report XML file is present and contains expected content
+		assertEqualContent(t,
+			"testdata/example-reports-dir/example-1.xml",
+			filepath.Join(unzipDir, "test_results/testdata/example-reports-dir/example-1.xml"),
+		)
+
+		// Verify coverage file is present and contains expected content
+		assertEqualContent(t,
+			"testdata/example-reports-dir/coverage-files/report.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report.xml"),
+		)
+
+		ignoredCoverageReportPath := filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report-2.xml")
+		_, err = os.Stat(ignoredCoverageReportPath)
+		assert.True(t, os.IsNotExist(err))
+
+		// Verify buildpulse.log is present and contains expected content
+		logdata, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
+		require.NoError(t, err)
+		assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
+	})
 }
 
 func Test_upload(t *testing.T) {
@@ -570,6 +662,8 @@ func Test_xmlPathsFromDir(t *testing.T) {
 			name: "DirectoryWithFilesAtRootAndInSubDirectories",
 			path: "testdata/example-reports-dir",
 			want: []string{
+				"testdata/example-reports-dir/coverage-files/report.xml",
+				"testdata/example-reports-dir/coverage-files/report-2.xml",
 				"testdata/example-reports-dir/example-1.xml",
 				"testdata/example-reports-dir/example-2.XML",
 				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-1.xml",
