@@ -29,6 +29,7 @@ FLAGS
   --repository-id   (required) BuildPulse repository ID for the repository that produced the test results
   --repository-dir  Path to local git clone of the repository (default: ".")
   --tree            SHA-1 hash of the git tree that produced the test results (for use only if a local git clone does not exist)
+  --coverage-files  Paths to coverage files or directories containing coverage files (space-separated)
 
 ENVIRONMENT VARIABLES
 	Set the following environment variables:
@@ -38,7 +39,7 @@ ENVIRONMENT VARIABLES
 	BUILDPULSE_SECRET_ACCESS_KEY  BuildPulse secret access key for the account that owns the repository
 
 EXAMPLE
-	$ %s submit test/reports/*.xml --account-id 42 --repository-id 8675309
+	$ %s submit test/reports/*.xml --account-id 42 --repository-id 8675309 --coverage-files coverage/coverage.xml coverage/coverage2.xml
 `, "\t", "  ")
 
 func main() {
