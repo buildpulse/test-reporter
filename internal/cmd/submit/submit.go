@@ -94,7 +94,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
-	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files or directories containing coverage files")
+	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files or directories containing coverage files (space-separated)")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
