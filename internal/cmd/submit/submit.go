@@ -67,17 +67,18 @@ type Submit struct {
 	logger  logger.Logger
 	version *metadata.Version
 
-	envs                map[string]string
-	paths               []string
-	coveragePathsString string
-	coveragePaths       []string
-	bucket              string
-	accountID           uint64
-	repositoryID        uint64
-	repositoryPath      string
-	tree                string
-	credentials         credentials
-	commitResolver      metadata.CommitResolver
+	envs                         map[string]string
+	paths                        []string
+	coveragePathsString          string
+	coveragePaths                []string
+	bucket                       string
+	accountID                    uint64
+	repositoryID                 uint64
+	repositoryPath               string
+	tree                         string
+	disableCoverageAutoDiscovery bool
+	credentials                  credentials
+	commitResolver               metadata.CommitResolver
 }
 
 // NewSubmit creates a new Submit instance.
@@ -94,7 +95,8 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.Uint64Var(&s.repositoryID, "repository-id", 0, "BuildPulse repository ID (required)")
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
-	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files or directories containing coverage files (space-separated)")
+	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files (space-separated)")
+	s.fs.BoolVar(&s.disableCoverageAutoDiscovery, "disable-coverage-auto", false, "Disables coverage file autodiscovery")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
@@ -288,7 +290,7 @@ func (s *Submit) bundle() (string, error) {
 
 	// if coverage file paths are not provided, we infer them
 	var coveragePaths = s.coveragePaths
-	if len(coveragePaths) == 0 {
+	if len(coveragePaths) == 0 && !s.disableCoverageAutoDiscovery {
 		coveragePaths, err = s.coveragePathsInferred()
 	}
 
