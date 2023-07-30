@@ -56,13 +56,14 @@ To use `test-reporter` with another CI provider, the following environment varia
 | `REPOSITORY_NAME`    | Name of the repository                                             |
 
 The following are flags that can be set. Make sure to **set flags after CLI args**.
-| Environment Variable | Required                          | Description                                  |
-|----------------------|-----------------------------------|----------------------------------------------|
-| `account-id`         |   ✓                               | BuildPulse account ID (see dashboard)        |
-| `repository-id`      |   ✓                               | BuildPulse repository ID (see dashboard)     |
-| `repository-dir`     | Only if `tree` not set            | Path to repository directory                 |
-| `tree`               | Only if `repository-dir` not set  | Git tree SHA                                 |
-| `coverage-files`     | Only if using BuildPulse Coverage | **Space-separated** paths to coverage files. |
+| Flag                 | Required                          | Description                                     |
+|----------------------|-----------------------------------|-------------------------------------------------|
+| `account-id`         |   ✓                               | BuildPulse account ID (see dashboard)           |
+| `repository-id`      |   ✓                               | BuildPulse repository ID (see dashboard)        |
+| `repository-dir`     | Only if `tree` not set            | Path to repository directory                    |
+| `tree`               | Only if `repository-dir` not set  | Git tree SHA                                    |
+| `coverage-files`     | Only if using BuildPulse Coverage | **Space-separated** paths to coverage files.    |
+| `tags`               |                                   | **Space-separated** tags to apply to the build. |
 
 Example:
 ```

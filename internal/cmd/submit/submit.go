@@ -71,6 +71,7 @@ type Submit struct {
 	paths                        []string
 	coveragePathsString          string
 	coveragePaths                []string
+	tagsString                   string
 	bucket                       string
 	accountID                    uint64
 	repositoryID                 uint64
@@ -97,6 +98,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
 	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files (space-separated)")
 	s.fs.BoolVar(&s.disableCoverageAutoDiscovery, "disable-coverage-auto", false, "Disables coverage file autodiscovery")
+	s.fs.StringVar(&s.tagsString, "tags", "", "Tags to apply to the build (space-separated)")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
 	s.logger.Printf("Current version: %s", s.version.String())
@@ -156,6 +158,8 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 
 	if len(s.coveragePathsString) > 0 {
 		s.coveragePaths = strings.Split(s.coveragePathsString, " ")
+	} else {
+		s.coveragePaths = []string{}
 	}
 
 	id, ok := envs["BUILDPULSE_ACCESS_KEY_ID"]
@@ -242,7 +246,8 @@ func (s *Submit) bundle() (string, error) {
 	//////////////////////////////////////////////////////////////////////////////
 
 	s.logger.Printf("Gathering metadata to describe the build")
-	meta, err := metadata.NewMetadata(s.version, s.envs, s.commitResolver, time.Now, s.logger)
+	tags := strings.Split(s.tagsString, " ")
+	meta, err := metadata.NewMetadata(s.version, s.envs, tags, s.commitResolver, time.Now, s.logger)
 	if err != nil {
 		return "", err
 	}
