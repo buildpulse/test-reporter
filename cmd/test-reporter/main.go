@@ -30,6 +30,7 @@ FLAGS
   --repository-dir  Path to local git clone of the repository (default: ".")
   --tree            SHA-1 hash of the git tree that produced the test results (for use only if a local git clone does not exist)
   --coverage-files  Paths to coverage files or directories containing coverage files (space-separated)
+	--tags            Tags to apply to the build (space-separated)
 
 ENVIRONMENT VARIABLES
 	Set the following environment variables:

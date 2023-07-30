@@ -44,6 +44,7 @@ func TestSubmit_Init(t *testing.T) {
 		assert.Equal(t, exampleEnv, s.envs)
 		assert.Equal(t, ".", s.repositoryPath)
 		assert.Equal(t, "Repository", s.commitResolver.Source())
+		assert.Equal(t, s.coveragePaths, []string{})
 	})
 
 	t.Run("WithCoveragePathString", func(t *testing.T) {
@@ -76,6 +77,22 @@ func TestSubmit_Init(t *testing.T) {
 		assert.Equal(t, ".", s.repositoryPath)
 		assert.Equal(t, "Repository", s.commitResolver.Source())
 		assert.True(t, s.disableCoverageAutoDiscovery)
+	})
+
+	t.Run("WithTagsString", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init([]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309", "--tags", "tag1 tag2"}, exampleEnv, new(stubCommitResolverFactory))
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"testdata/example-reports-dir/example-1.xml"}, s.paths)
+		assert.EqualValues(t, 42, s.accountID)
+		assert.EqualValues(t, 8675309, s.repositoryID)
+		assert.Equal(t, "buildpulse-uploads", s.bucket)
+		assert.Equal(t, "some-access-key-id", s.credentials.AccessKeyID)
+		assert.Equal(t, "some-secret-access-key", s.credentials.SecretAccessKey)
+		assert.Equal(t, exampleEnv, s.envs)
+		assert.Equal(t, ".", s.repositoryPath)
+		assert.Equal(t, "Repository", s.commitResolver.Source())
+		assert.Equal(t, s.tagsString, "tag1 tag2")
 	})
 
 	t.Run("WithMultiplePathArgs", func(t *testing.T) {
@@ -608,6 +625,40 @@ func Test_bundle(t *testing.T) {
 		logdata, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.log"))
 		require.NoError(t, err)
 		assert.Contains(t, string(logdata), "Gathering metadata to describe the build")
+	})
+
+	t.Run("bundle with tags", func(t *testing.T) {
+		envs := map[string]string{
+			"GITHUB_ACTIONS": "true",
+			"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+		}
+
+		log := logger.New()
+		s := &Submit{
+			logger:         log,
+			version:        &metadata.Version{Number: "v1.2.3"},
+			commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+			envs:           envs,
+			paths:          []string{"testdata/example-reports-dir/example-1.xml"},
+			bucket:         "buildpulse-uploads",
+			accountID:      42,
+			repositoryID:   8675309,
+			tagsString:     "tag1 tag2",
+		}
+
+		path, err := s.bundle()
+		require.NoError(t, err)
+
+		unzipDir := t.TempDir()
+		err = archiver.Unarchive(path, unzipDir)
+		require.NoError(t, err)
+
+		// Verify buildpulse.yml is present and contains expected content
+		yaml, err := os.ReadFile(filepath.Join(unzipDir, "buildpulse.yml"))
+		require.NoError(t, err)
+
+		assert.Contains(t, string(yaml), "- tag1")
+		assert.Contains(t, string(yaml), "- tag2")
 	})
 }
 

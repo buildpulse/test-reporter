@@ -28,6 +28,7 @@ type Metadata struct {
 	RepoNameWithOwner    string    `yaml:":repo_name_with_owner"`
 	ReporterOS           string    `yaml:":reporter_os"`
 	ReporterVersion      string    `yaml:":reporter_version"`
+	Tags                 []string  `yaml:":tags,omitempty"`
 	Timestamp            time.Time `yaml:":timestamp"`
 	TreeSHA              string    `yaml:":tree,omitempty"`
 
@@ -36,7 +37,7 @@ type Metadata struct {
 }
 
 // NewMetadata creates a new Metadata instance from the given args.
-func NewMetadata(version *Version, envs map[string]string, resolver CommitResolver, now func() time.Time, logger logger.Logger) (*Metadata, error) {
+func NewMetadata(version *Version, envs map[string]string, tags []string, resolver CommitResolver, now func() time.Time, logger logger.Logger) (*Metadata, error) {
 	m := &Metadata{logger: logger}
 
 	if err := m.initProviderData(envs); err != nil {
@@ -49,6 +50,8 @@ func NewMetadata(version *Version, envs map[string]string, resolver CommitResolv
 
 	m.initTimestamp(now)
 	m.initVersionData(version)
+
+	m.Tags = tags
 
 	return m, nil
 }
