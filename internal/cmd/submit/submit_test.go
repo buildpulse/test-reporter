@@ -448,7 +448,7 @@ func Test_bundle(t *testing.T) {
 			commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
 			envs:           envs,
 			paths:          []string{"testdata/example-reports-dir/example-1.xml"},
-			coveragePaths:  []string{"testdata/example-reports-dir/coverage-files/report.xml", "testdata/example-reports-dir/coverage-files/report-2.xml"},
+			coveragePaths:  []string{"testdata/example-reports-dir/coverage/report.xml", "testdata/example-reports-dir/coverage/report-2.xml"},
 			bucket:         "buildpulse-uploads",
 			accountID:      42,
 			repositoryID:   8675309,
@@ -477,13 +477,13 @@ func Test_bundle(t *testing.T) {
 
 		// Verify coverage files are present and contains expected content
 		assertEqualContent(t,
-			"testdata/example-reports-dir/coverage-files/report.xml",
-			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report.xml"),
+			"testdata/example-reports-dir/coverage/report.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage/report.xml"),
 		)
 
 		assertEqualContent(t,
-			"testdata/example-reports-dir/coverage-files/report-2.xml",
-			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report-2.xml"),
+			"testdata/example-reports-dir/coverage/report-2.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage/report-2.xml"),
 		)
 
 		// Verify buildpulse.log is present and contains expected content
@@ -533,12 +533,16 @@ func Test_bundle(t *testing.T) {
 
 		// Verify coverage file is present and contains expected content
 		assertEqualContent(t,
-			"testdata/example-reports-dir/coverage-files/report.xml",
-			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report.xml"),
+			"testdata/example-reports-dir/coverage/report.xml",
+			filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage/report.xml"),
 		)
 
-		ignoredCoverageReportPath := filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage-files/report-2.xml")
+		ignoredCoverageReportPath := filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/coverage/report-2.xml")
 		_, err = os.Stat(ignoredCoverageReportPath)
+		assert.True(t, os.IsNotExist(err))
+
+		ignoredSourceFilePath := filepath.Join(unzipDir, "coverage/testdata/example-reports-dir/vendor/simplecov/coverage_statistic.go")
+		_, err = os.Stat(ignoredSourceFilePath)
 		assert.True(t, os.IsNotExist(err))
 
 		// Verify buildpulse.log is present and contains expected content
@@ -662,8 +666,8 @@ func Test_xmlPathsFromDir(t *testing.T) {
 			name: "DirectoryWithFilesAtRootAndInSubDirectories",
 			path: "testdata/example-reports-dir",
 			want: []string{
-				"testdata/example-reports-dir/coverage-files/report.xml",
-				"testdata/example-reports-dir/coverage-files/report-2.xml",
+				"testdata/example-reports-dir/coverage/report.xml",
+				"testdata/example-reports-dir/coverage/report-2.xml",
 				"testdata/example-reports-dir/example-1.xml",
 				"testdata/example-reports-dir/example-2.XML",
 				"testdata/example-reports-dir/dir-with-xml-files/browserstack/example-1.xml",
