@@ -289,7 +289,7 @@ func (s *Submit) bundle() (string, error) {
 	// if coverage file paths are not provided, we infer them
 	var coveragePaths = s.coveragePaths
 	if len(coveragePaths) == 0 {
-		coveragePaths, err = coveragePathsInferred()
+		coveragePaths, err = s.coveragePathsInferred()
 	}
 
 	if err == nil && len(coveragePaths) > 0 {
@@ -452,11 +452,15 @@ func xmlPathsFromArgs(args []string) ([]string, error) {
 	return paths, nil
 }
 
-func globPatternFromPattern(pattern string) string {
-	return fmt.Sprintf("./**/%s", pattern)
+func globPatternFromPattern(repositoryPath string, pattern string) string {
+	if len(repositoryPath) == 0 {
+		repositoryPath = "."
+	}
+
+	return fmt.Sprintf("%s/**/%s", repositoryPath, pattern)
 }
 
-func coveragePathsInferred() ([]string, error) {
+func (s *Submit) coveragePathsInferred() ([]string, error) {
 	coverageFileTypes := []string{
 		"*coverage*.*",
 		"nosetests.xml",
@@ -481,9 +485,120 @@ func coveragePathsInferred() ([]string, error) {
 		"test_cov.xml",
 	}
 
+	fileBlocklistMatchers := []string{
+		`__pycache__`,
+		`node_modules/.*`,
+		`vendor`,
+		`\.circleci`,
+		`\.git`,
+		`\.gitignore`,
+		`\.nvmrc`,
+		`\.nyc_output`,
+		`\.tox`,
+		`.*\.am$`,
+		`.*\.bash$`,
+		`.*\.bat$`,
+		`.*\.bw$`,
+		`.*\.cfg$`,
+		`.*\.class$`,
+		`.*\.cmake$`,
+		`.*\.cmake$`,
+		`.*\.conf$`,
+		`.*\.coverage$`,
+		`.*\.cp$`,
+		`.*\.cpp$`,
+		`.*\.crt$`,
+		`.*\.css$`,
+		`.*\.csv$`,
+		`.*\.csv$`,
+		`.*\.data$`,
+		`.*\.db$`,
+		`.*\.dox$`,
+		`.*\.ec$`,
+		`.*\.ec$`,
+		`.*\.egg$`,
+		`.*\.egg-info$`,
+		`.*\.el$`,
+		`.*\.env$`,
+		`.*\.erb$`,
+		`.*\.exe$`,
+		`.*\.ftl$`,
+		`.*\.gif$`,
+		`.*\.go$`,
+		`.*\.gradle$`,
+		`.*\.gz$`,
+		`.*\.h$`,
+		`.*\.html$`,
+		`.*\.in$`,
+		`.*\.jade$`,
+		`.*\.jar.*$`,
+		`.*\.jpeg$`,
+		`.*\.jpg$`,
+		`.*\.js$`,
+		`.*\.less$`,
+		`.*\.log$`,
+		`.*\.m4$`,
+		`.*\.mak.*$`,
+		`.*\.map$`,
+		`.*\.marker$`,
+		`.*\.md$`,
+		`.*\.o$`,
+		`.*\.p12$`,
+		`.*\.pem$`,
+		`.*\.png$`,
+		`.*\.pom.*$`,
+		`.*\.profdata$`,
+		`.*\.proto$`,
+		`.*\.ps1$`,
+		`.*\.pth$`,
+		`.*\.py$`,
+		`.*\.pyc$`,
+		`.*\.pyo$`,
+		`.*\.rb$`,
+		`.*\.rsp$`,
+		`.*\.rst$`,
+		`.*\.ru$`,
+		`.*\.sbt$`,
+		`.*\.scss$`,
+		`.*\.scss$`,
+		`.*\.serialized$`,
+		`.*\.sh$`,
+		`.*\.snapshot$`,
+		`.*\.sql$`,
+		`.*\.svg$`,
+		`.*\.tar\.tz$`,
+		`.*\.template$`,
+		`.*\.ts$`,
+		`.*\.whl$`,
+		`.*\.xcconfig$`,
+		`.*\.xcoverage\..*$`,
+		`.*/classycle/report\.xml$`,
+		`.*codecov\.yml$`,
+		`.*~$`,
+		`.*\.coveragerc$`,
+		`\.coverage.*$`,
+		`codecov\.SHA256SUM$`,
+		`codecov\.SHA256SUM\.sig$`,
+		`coverage-summary\.json$`,
+		`createdFiles\.lst$`,
+		`fullLocaleNames\.lst$`,
+		`include\.lst$`,
+		`inputFiles\.lst$`,
+		`phpunit-code-coverage\.xml$`,
+		`phpunit-coverage\.xml$`,
+		`remapInstanbul\.coverage.*\.json$`,
+		`scoverage\.measurements\..*$`,
+		`test-result-.*-codecoverage\.json$`,
+		`test_.*_coverage\.txt$`,
+		`testrunner-coverage.*$`,
+		`.*\..*js$`,
+		`\.yarn$`,
+		`.*\.zip$`,
+	}
+
 	filePaths := []string{}
 	for _, filePattern := range coverageFileTypes {
-		fullPattern := globPatternFromPattern(filePattern)
+		fullPattern := globPatternFromPattern(s.repositoryPath, filePattern)
 		candidates, err := filepathx.Glob(fullPattern)
 
 		if err != nil {
@@ -493,7 +608,23 @@ func coveragePathsInferred() ([]string, error) {
 		filePaths = append(filePaths, candidates...)
 	}
 
-	return filePaths, nil
+	sanitized := []string{}
+	for _, filepath := range filePaths {
+		var matched = false
+		for _, blocklistPattern := range fileBlocklistMatchers {
+			regex, _ := regexp.Compile(blocklistPattern)
+			if regex.MatchString(filepath) {
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			sanitized = append(sanitized, filepath)
+		}
+	}
+
+	return sanitized, nil
 }
 
 // xmlPathsFromDir returns a list of all the XML files in the given directory
