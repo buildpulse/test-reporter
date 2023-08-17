@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -21,7 +22,6 @@ import (
 	"github.com/buildpulse/test-reporter/internal/metadata"
 	"github.com/buildpulse/test-reporter/internal/tar"
 	"github.com/google/uuid"
-	"github.com/yargevad/filepathx"
 )
 
 type credentials struct {
@@ -459,14 +459,6 @@ func xmlPathsFromArgs(args []string) ([]string, error) {
 	return paths, nil
 }
 
-func globPatternFromPattern(repositoryPath string, pattern string) string {
-	if len(repositoryPath) == 0 {
-		repositoryPath = "."
-	}
-
-	return fmt.Sprintf("%s/**/%s", repositoryPath, pattern)
-}
-
 func (s *Submit) coveragePathsInferred() ([]string, error) {
 	coverageFileTypes := []string{
 		"*coverage*.*",
@@ -603,35 +595,18 @@ func (s *Submit) coveragePathsInferred() ([]string, error) {
 		`.*\.zip$`,
 	}
 
-	filePaths := []string{}
-	for _, filePattern := range coverageFileTypes {
-		fullPattern := globPatternFromPattern(s.repositoryPath, filePattern)
-		candidates, err := filepathx.Glob(fullPattern)
-
-		if err != nil {
-			return []string{}, err
-		}
-
-		filePaths = append(filePaths, candidates...)
+	rpath := s.repositoryPath
+	if s.repositoryPath == "" {
+		rpath = "."
 	}
 
-	sanitized := []string{}
-	for _, filepath := range filePaths {
-		var matched = false
-		for _, blocklistPattern := range fileBlocklistMatchers {
-			regex, _ := regexp.Compile(blocklistPattern)
-			if regex.MatchString(filepath) {
-				matched = true
-				break
-			}
-		}
+	filePaths, err := locateFiles(rpath, coverageFileTypes, fileBlocklistMatchers)
 
-		if !matched {
-			sanitized = append(sanitized, filepath)
-		}
+	if err != nil {
+		return []string{}, err
 	}
 
-	return sanitized, nil
+	return filePaths, nil
 }
 
 // xmlPathsFromDir returns a list of all the XML files in the given directory
@@ -679,4 +654,38 @@ func xmlPathsFromGlob(pattern string) ([]string, error) {
 // (case-insensitive); false, otherwise.
 func isXML(filename string) bool {
 	return bytes.EqualFold([]byte(filepath.Ext(filename)), []byte(".xml"))
+}
+
+// locate files given an include list and ingore list (regex)
+func locateFiles(baseDir string, includeList []string, ignoreList []string) ([]string, error) {
+	matched := []string{}
+
+	err := filepath.Walk(baseDir, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		for _, ignorePattern := range ignoreList {
+			regex, _ := regexp.Compile(ignorePattern)
+			if regex.MatchString(path) {
+				if info.IsDir() {
+					return filepath.SkipDir
+				}
+
+				return nil
+			}
+		}
+
+		if !info.IsDir() {
+			for _, filePattern := range includeList {
+				if fileMatch, _ := filepath.Match(filePattern, info.Name()); fileMatch {
+					matched = append(matched, path)
+				}
+			}
+		}
+
+		return nil
+	})
+
+	return matched, err
 }
