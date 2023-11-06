@@ -206,7 +206,7 @@ func TestNewMetadata(t *testing.T) {
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
 	_, err := NewMetadata(&Version{}, map[string]string{}, []string{}, newCommitResolverStub(), time.Now, logger.New())
 	if assert.Error(t, err) {
-		assert.Contains(t, err.Error(), "missing required environment variables")
+		assert.Contains(t, err.Error(), "env: environment variable \"GIT_BRANCH\" should not be empty; environment variable \"GIT_COMMIT\" should not be empty; environment variable \"BUILD_URL\" should not be empty; environment variable \"ORGANIZATION_NAME\" should not be empty; environment variable \"REPOSITORY_NAME\" should not be empty")
 	}
 }
 

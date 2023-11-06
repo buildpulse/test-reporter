@@ -1,7 +1,6 @@
 package metadata
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -708,7 +707,7 @@ type customMetadata struct {
 
 func (w *customMetadata) Init(envs map[string]string, log logger.Logger) error {
 	if err := env.Parse(w, env.Options{Environment: envs}); err != nil {
-		return errors.New("missing required environment variables")
+		return err
 	}
 
 	log.Printf("Using $GIT_COMMIT environment variable as commit SHA: %s", w.GitCommit)
