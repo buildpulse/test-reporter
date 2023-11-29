@@ -77,6 +77,7 @@ type Submit struct {
 	repositoryID                 uint64
 	repositoryPath               string
 	tree                         string
+	quotaID                      string
 	disableCoverageAutoDiscovery bool
 	credentials                  credentials
 	commitResolver               metadata.CommitResolver
@@ -97,6 +98,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.StringVar(&s.repositoryPath, "repository-dir", ".", "Path to local clone of repository")
 	s.fs.StringVar(&s.tree, "tree", "", "SHA-1 hash of git tree")
 	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files (space-separated)")
+	s.fs.StringVar(&s.quotaID, "quota-id", "", "Quota ID to submit against")
 	s.fs.BoolVar(&s.disableCoverageAutoDiscovery, "disable-coverage-auto", false, "Disables coverage file autodiscovery")
 	s.fs.StringVar(&s.tagsString, "tags", "", "Tags to apply to the build (space-separated)")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
@@ -201,6 +203,10 @@ func (s *Submit) Init(args []string, envs map[string]string, commitResolverFacto
 		return nil
 	}
 
+	if !flagset["quota-id"] {
+		s.logger.Printf("Submitting against quota: %s", s.quotaID)
+	}
+
 	if !flagset["repository-dir"] {
 		s.logger.Printf("Using default value for -repository-dir flag: %s", s.repositoryPath)
 	}
@@ -247,7 +253,7 @@ func (s *Submit) bundle() (string, error) {
 
 	s.logger.Printf("Gathering metadata to describe the build")
 	tags := strings.Split(s.tagsString, " ")
-	meta, err := metadata.NewMetadata(s.version, s.envs, tags, s.commitResolver, time.Now, s.logger)
+	meta, err := metadata.NewMetadata(s.version, s.envs, tags, s.quotaID, s.commitResolver, time.Now, s.logger)
 	if err != nil {
 		return "", err
 	}

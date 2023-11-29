@@ -1,6 +1,6 @@
 module github.com/buildpulse/test-reporter
 
-go 1.19
+go 1.21
 
 require (
 	github.com/aws/aws-sdk-go v1.44.211
@@ -11,7 +11,6 @@ require (
 	github.com/mholt/archiver/v3 v3.5.1
 	github.com/otiai10/copy v1.9.0
 	github.com/stretchr/testify v1.8.2
-	github.com/yargevad/filepathx v1.0.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
