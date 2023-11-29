@@ -193,7 +193,7 @@ func TestNewMetadata(t *testing.T) {
 			)
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, tt.tags, commitResolver, now, logger.New())
+			meta, err := NewMetadata(version, tt.envs, tt.tags, "", commitResolver, now, logger.New())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -204,7 +204,7 @@ func TestNewMetadata(t *testing.T) {
 }
 
 func TestNewMetadata_unsupportedProvider(t *testing.T) {
-	_, err := NewMetadata(&Version{}, map[string]string{}, []string{}, newCommitResolverStub(), time.Now, logger.New())
+	_, err := NewMetadata(&Version{}, map[string]string{}, []string{}, "", newCommitResolverStub(), time.Now, logger.New())
 	if assert.Error(t, err) {
 		assert.Contains(t, err.Error(), "env: environment variable \"GIT_BRANCH\" should not be empty; environment variable \"GIT_COMMIT\" should not be empty; environment variable \"BUILD_URL\" should not be empty; environment variable \"ORGANIZATION_NAME\" should not be empty; environment variable \"REPOSITORY_NAME\" should not be empty")
 	}
@@ -242,7 +242,7 @@ func TestNewMetadata_customCheckName(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			meta, err := NewMetadata(&Version{}, tt.envs, []string{}, newCommitResolverStub(), time.Now, logger.New())
+			meta, err := NewMetadata(&Version{}, tt.envs, []string{}, "", newCommitResolverStub(), time.Now, logger.New())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()
@@ -314,7 +314,75 @@ func TestNewMetadata_appliesTags(t *testing.T) {
 			)
 
 			version := &Version{Number: "v1.2.3", GoOS: "linux"}
-			meta, err := NewMetadata(version, tt.envs, tt.tags, commitResolver, now, logger.New())
+			meta, err := NewMetadata(version, tt.envs, tt.tags, "", commitResolver, now, logger.New())
+			assert.NoError(t, err)
+
+			yaml, err := meta.MarshalYAML()
+			assert.NoError(t, err)
+			assert.Equal(t, string(expected), string(yaml))
+		})
+	}
+}
+
+func TestNewMetadata_appliesQuotaID(t *testing.T) {
+	tests := []struct {
+		name    string
+		envs    map[string]string
+		quotaID string
+		fixture string
+	}{
+		{
+			name: "GitHubActions",
+			envs: map[string]string{
+				"GITHUB_ACTIONS":     "true",
+				"GITHUB_ACTOR":       "some-user",
+				"GITHUB_BASE_REF":    "refs/heads/main",
+				"GITHUB_EVENT_NAME":  "push",
+				"GITHUB_HEAD_REF":    "refs/heads/some-feature",
+				"GITHUB_REF":         "refs/heads/some-feature",
+				"GITHUB_REPOSITORY":  "some-owner/some-repo",
+				"GITHUB_RUN_ATTEMPT": "1",
+				"GITHUB_RUN_ID":      "8675309",
+				"GITHUB_RUN_NUMBER":  "42",
+				"GITHUB_SERVER_URL":  "https://github.com",
+				"GITHUB_SHA":         "1f192ff735f887dd7a25229b2ece0422d17931f5",
+				"GITHUB_WORKFLOW":    "build",
+			},
+			fixture: "./testdata/github_quota.yml",
+			quotaID: "quota1",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			now := func() time.Time {
+				return time.Date(2020, 7, 11, 1, 2, 3, 0, time.UTC)
+			}
+
+			expected, err := os.ReadFile(tt.fixture)
+			require.NoError(t, err)
+
+			authoredAt, err := time.Parse(time.RFC3339, "2020-07-09T04:05:06-05:00")
+			require.NoError(t, err)
+
+			committedAt, err := time.Parse(time.RFC3339, "2020-07-10T07:08:09+13:00")
+			require.NoError(t, err)
+
+			commitResolver := NewStaticCommitResolver(
+				&Commit{
+					AuthoredAt:     authoredAt,
+					AuthorEmail:    "some-author@example.com",
+					AuthorName:     "Some Author",
+					CommittedAt:    committedAt,
+					CommitterEmail: "some-committer@example.com",
+					CommitterName:  "Some Committer",
+					Message:        "Some message",
+					TreeSHA:        "0da9df599c02da5e7f5058b7108dcd5e1929a0fe",
+				},
+				logger.New(),
+			)
+
+			version := &Version{Number: "v1.2.3", GoOS: "linux"}
+			meta, err := NewMetadata(version, tt.envs, []string{}, tt.quotaID, commitResolver, now, logger.New())
 			assert.NoError(t, err)
 
 			yaml, err := meta.MarshalYAML()

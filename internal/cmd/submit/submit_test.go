@@ -95,6 +95,23 @@ func TestSubmit_Init(t *testing.T) {
 		assert.Equal(t, s.tagsString, "tag1 tag2")
 	})
 
+	t.Run("WithTagsString", func(t *testing.T) {
+		s := NewSubmit(&metadata.Version{}, logger.New())
+		err := s.Init([]string{"testdata/example-reports-dir/example-*.xml", "--account-id", "42", "--repository-id", "8675309", "--tags", "tag1 tag2", "--quota-id", "quota1"}, exampleEnv, new(stubCommitResolverFactory))
+		require.NoError(t, err)
+		assert.ElementsMatch(t, []string{"testdata/example-reports-dir/example-1.xml"}, s.paths)
+		assert.EqualValues(t, 42, s.accountID)
+		assert.EqualValues(t, 8675309, s.repositoryID)
+		assert.Equal(t, "buildpulse-uploads", s.bucket)
+		assert.Equal(t, "some-access-key-id", s.credentials.AccessKeyID)
+		assert.Equal(t, "some-secret-access-key", s.credentials.SecretAccessKey)
+		assert.Equal(t, "quota1", s.quotaID)
+		assert.Equal(t, exampleEnv, s.envs)
+		assert.Equal(t, ".", s.repositoryPath)
+		assert.Equal(t, "Repository", s.commitResolver.Source())
+		assert.Equal(t, s.tagsString, "tag1 tag2")
+	})
+
 	t.Run("WithMultiplePathArgs", func(t *testing.T) {
 		s := NewSubmit(&metadata.Version{}, logger.New())
 		err := s.Init(
