@@ -64,6 +64,7 @@ The following are flags that can be set. Make sure to **set flags after CLI args
 | `tree`               | Only if `repository-dir` not set  | Git tree SHA                                    |
 | `coverage-files`     | Only if using BuildPulse Coverage | **Space-separated** paths to coverage files.    |
 | `tags`               |                                   | **Space-separated** tags to apply to the build. |
+| `quota-id`           |                                   | ID of the quota to apply upload to. Quotas can be set from the BuildPulse Dashboard. |
 
 Example:
 ```
