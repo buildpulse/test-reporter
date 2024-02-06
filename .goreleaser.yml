@@ -26,7 +26,7 @@ builds:
   - <<: *build_defaults
     id: windows
     goos: [windows]
-    goarch: [amd64, arm64]
+    goarch: [amd64]
 
 snapshot:
   name_template: "SNAPSHOT-{{.ShortCommit}}"
