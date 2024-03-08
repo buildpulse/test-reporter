@@ -1,6 +1,6 @@
 # BuildPulse Test Reporter [![MIT license](https://img.shields.io/badge/license-MIT-blue.svg)](https://raw.githubusercontent.com/buildpulse/test-reporter/master/LICENSE)
 
-The BuildPulse test reporter is a binary that connects your continuous integration (CI) to [buildpulse.io][] to help you detect, track, and eliminate flaky tests.
+The BuildPulse test reporter is a binary that connects your continuous integration (CI) to [buildpulse.io][] to help you detect, track, and [fix flaky tests](https://buildpulse.io/products/flaky-tests).
 
 Get started at [buildpulse.io][].
 
