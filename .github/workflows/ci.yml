@@ -14,7 +14,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: "1.21"
+          go-version: "1.24"
           check-latest: true
         id: go
 
@@ -61,7 +61,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: "1.21"
+          go-version: "1.24"
           check-latest: true
 
       - name: Install govulncheck
@@ -82,7 +82,7 @@ jobs:
       - name: Set up Go 1.x
         uses: actions/setup-go@v2
         with:
-          go-version: "1.21"
+          go-version: "1.24"
           check-latest: true
         id: go
 
@@ -122,12 +122,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
-          go-version: 1.21
+          go-version: 1.24
           check-latest: true
       - name: Install upx
         run: brew install upx
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v2
+        uses: goreleaser/goreleaser-action@v6.3.0
         with:
           version: latest
           args: release --rm-dist
