@@ -67,20 +67,21 @@ type Submit struct {
 	logger  logger.Logger
 	version *metadata.Version
 
-	envs                         map[string]string
-	paths                        []string
-	coveragePathsString          string
-	coveragePaths                []string
-	tagsString                   string
-	bucket                       string
-	accountID                    uint64
-	repositoryID                 uint64
-	repositoryPath               string
-	tree                         string
-	quotaID                      string
-	disableCoverageAutoDiscovery bool
-	credentials                  credentials
-	commitResolver               metadata.CommitResolver
+	envs                           map[string]string
+	paths                          []string
+	coveragePathsString            string
+	coveragePaths                  []string
+	tagsString                     string
+	bucket                         string
+	accountID                      uint64
+	repositoryID                   uint64
+	repositoryPath                 string
+	tree                           string
+	quotaID                        string
+	disableCoverageAutoDiscovery   bool
+	credentials                    credentials
+	disableCodeownersAutoDiscovery bool
+	commitResolver                 metadata.CommitResolver
 }
 
 // NewSubmit creates a new Submit instance.
@@ -100,6 +101,7 @@ func NewSubmit(version *metadata.Version, log logger.Logger) *Submit {
 	s.fs.StringVar(&s.coveragePathsString, "coverage-files", "", "Paths to coverage files (space-separated)")
 	s.fs.StringVar(&s.quotaID, "quota-id", "", "Quota ID to submit against")
 	s.fs.BoolVar(&s.disableCoverageAutoDiscovery, "disable-coverage-auto", false, "Disables coverage file autodiscovery")
+	s.fs.BoolVar(&s.disableCodeownersAutoDiscovery, "disable-codeowners-auto", false, "Disables CODEOWNERS file autodiscovery")
 	s.fs.StringVar(&s.tagsString, "tags", "", "Tags to apply to the build (space-separated)")
 	s.fs.SetOutput(io.Discard) // Disable automatic writing to STDERR
 
@@ -313,6 +315,19 @@ func (s *Submit) bundle() (string, error) {
 			if err != nil {
 				return "", err
 			}
+		}
+	}
+
+	if !s.disableCodeownersAutoDiscovery {
+		codeownersPath, err := s.codeownersPathsInferred()
+		if err == nil {
+			s.logger.Printf("Adding %s to tarball as CODEOWNERS", codeownersPath)
+			err = t.Write(codeownersPath, "CODEOWNERS")
+			if err != nil {
+				s.logger.Printf("Error adding CODEOWNERS file %s: %v", codeownersPath, err)
+			}
+		} else {
+			s.logger.Printf("No codeowners file could be found: %v", err)
 		}
 	}
 
@@ -613,6 +628,23 @@ func (s *Submit) coveragePathsInferred() ([]string, error) {
 	}
 
 	return filePaths, nil
+}
+
+func (s *Submit) codeownersPathsInferred() (string, error) {
+	codeownersLocations := []string{
+		"CODEOWNERS",
+		".github/CODEOWNERS",
+		".gitlab/CODEOWNERS",
+		"docs/CODEOWNERS",
+	}
+	for _, loc := range codeownersLocations {
+		codeownersPath := filepath.Join(s.repositoryPath, loc)
+		if _, err := os.Stat(codeownersPath); err == nil {
+			return codeownersPath, nil
+		}
+	}
+
+	return "", fmt.Errorf("no CODEOWNERS file found in locations: %s", strings.Join(codeownersLocations, ", "))
 }
 
 // xmlPathsFromDir returns a list of all the XML files in the given directory

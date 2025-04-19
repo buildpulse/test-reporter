@@ -769,6 +769,90 @@ func Test_upload(t *testing.T) {
 	}
 }
 
+func Test_bundle_with_codeowners(t *testing.T) {
+	// Setup: Create a temporary directory structure with a CODEOWNERS file
+	repoDir := t.TempDir()
+	githubDir := filepath.Join(repoDir, ".github")
+	err := os.Mkdir(githubDir, 0755)
+	require.NoError(t, err)
+	codeownersContent := "* @everyone"
+	codeownersPath := filepath.Join(githubDir, "CODEOWNERS")
+	err = os.WriteFile(codeownersPath, []byte(codeownersContent), 0644)
+	require.NoError(t, err)
+
+	envs := map[string]string{
+		"GITHUB_ACTIONS": "true",
+		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+	}
+
+	log := logger.New()
+	s := &Submit{
+		logger:         log,
+		version:        &metadata.Version{Number: "v1.2.3"},
+		commitResolver: metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+		envs:           envs,
+		paths:          []string{"testdata/example-reports-dir/example-1.xml"}, // use dummy reports path
+		bucket:         "buildpulse-uploads",
+		accountID:      42,
+		repositoryID:   8675309,
+		repositoryPath: repoDir, // Point to the temp repo dir
+	}
+
+	path, err := s.bundle()
+	require.NoError(t, err)
+
+	unzipDir := t.TempDir()
+	err = archiver.Unarchive(path, unzipDir)
+	require.NoError(t, err)
+
+	// Verify CODEOWNERS file is present and contains expected content
+	archivedCodeownersPath := filepath.Join(unzipDir, "CODEOWNERS")
+	assertEqualContent(t, codeownersPath, archivedCodeownersPath)
+}
+
+func Test_bundle_with_codeowners_disabled(t *testing.T) {
+	// Setup: Create a temporary directory structure with a CODEOWNERS file
+	repoDir := t.TempDir()
+	githubDir := filepath.Join(repoDir, ".github")
+	err := os.Mkdir(githubDir, 0755)
+	require.NoError(t, err)
+	codeownersContent := "* @everyone"
+	codeownersPath := filepath.Join(githubDir, "CODEOWNERS")
+	err = os.WriteFile(codeownersPath, []byte(codeownersContent), 0644)
+	require.NoError(t, err)
+
+	envs := map[string]string{
+		"GITHUB_ACTIONS": "true",
+		"GITHUB_SHA":     "aaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbb",
+	}
+
+	log := logger.New()
+	s := &Submit{
+		logger:                         log,
+		version:                        &metadata.Version{Number: "v1.2.3"},
+		commitResolver:                 metadata.NewStaticCommitResolver(&metadata.Commit{TreeSHA: "ccccccccccccccccccccdddddddddddddddddddd"}, log),
+		envs:                           envs,
+		paths:                          []string{"testdata/example-reports-dir/example-1.xml"}, // use dummy reports path
+		bucket:                         "buildpulse-uploads",
+		accountID:                      42,
+		repositoryID:                   8675309,
+		repositoryPath:                 repoDir, // Point to the temp repo dir
+		disableCodeownersAutoDiscovery: true,
+	}
+
+	path, err := s.bundle()
+	require.NoError(t, err)
+
+	unzipDir := t.TempDir()
+	err = archiver.Unarchive(path, unzipDir)
+	require.NoError(t, err)
+
+	// Verify CODEOWNERS file is not present in archive
+	archivedCodeownersPath := filepath.Join(unzipDir, "CODEOWNERS")
+	_, err = os.Stat(archivedCodeownersPath)
+	assert.True(t, os.IsNotExist(err), "CODEOWNERS file should not exist in the archive when disabled")
+}
+
 func Test_toGz(t *testing.T) {
 	path, err := toGz("testdata/example-reports-dir/example.txt")
 	require.NoError(t, err)

@@ -13,7 +13,7 @@ builds:
         - -X main.Commit={{.ShortCommit}}
       hooks:
         post:
-          - upx "{{ .Path }}"
+          - upx {{ if eq .Os "darwin" }}--force-macos {{ end }}{{ .Path }}
       id: linux
       goos: [linux]
       goarch: [amd64, arm64]
