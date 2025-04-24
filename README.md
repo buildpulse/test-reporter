@@ -4,6 +4,28 @@ The BuildPulse test reporter is a binary that connects your continuous integrati
 
 Get started at [buildpulse.io][].
 
+## Installation
+
+The latest built binary is available at `https://get.buildpulse.io` and are built for 64-bit architectures.
+
+| OS    | Architecture | URL |
+| -------- | ------- | ------- |
+| Linux  | `x64/amd64`    | `https://get.buildpulse.io/test-reporter-linux-amd64` |
+| Linux  | `arm64`    | `https://get.buildpulse.io/test-reporter-linux-arm64` |
+| MacOS | `x64/amd64`     | `https://get.buildpulse.io/test-reporter-darwin-amd64` |
+| MacOS | `arm64`     | `https://get.buildpulse.io/test-reporter-darwin-arm64` |
+| Windows    | `x64/amd64`    | `https://get.buildpulse.io/test-reporter-windows-amd64.exe` |
+
+Example:
+```
+curl -fsSL --retry 3 --retry-connrefused --connect-timeout 5 https://get.buildpulse.io/test-reporter-linux-amd64 > ./test-reporter
+
+./test-reporter --version
+```
+
+## GitHub Actions
+If you're using GitHub Actions for CI, [buildpulse-action](https://github.com/buildpulse/buildpulse-action) wraps around this binary and makes it easy to use in your workflows.
+
 ## Setup
 
 Install goreleaser to build
