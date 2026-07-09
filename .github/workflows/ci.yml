@@ -8,7 +8,7 @@ jobs:
   build:
     name: Build
 
-    runs-on: ubuntu-latest
+    runs-on: bp-ubuntu-latest-x64-2x
 
     steps:
       - name: Set up Go 1.x
@@ -53,7 +53,7 @@ jobs:
   govulncheck:
     name: Vulnerability check
 
-    runs-on: ubuntu-latest
+    runs-on: bp-ubuntu-latest-x64-2x
 
     steps:
       - uses: actions/checkout@v2
@@ -73,7 +73,7 @@ jobs:
   smoke-test:
     name: Smoke test
 
-    runs-on: ubuntu-latest
+    runs-on: bp-ubuntu-latest-x64-2x
 
     outputs:
       version: ${{ steps.get_version.outputs.version }}
@@ -149,7 +149,7 @@ jobs:
   verify-alpine:
     name: Verify binary (Alpine)
     needs: create-release
-    runs-on: ubuntu-latest
+    runs-on: bp-ubuntu-latest-x64-2x
     steps:
       - name: Download binary from release
         run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
@@ -175,7 +175,7 @@ jobs:
   verify-ubuntu:
     name: Verify binary (Ubuntu)
     needs: create-release
-    runs-on: ubuntu-latest
+    runs-on: bp-ubuntu-latest-x64-2x
     steps:
       - name: Download binary from release
         run: gh release download ${{ needs.create-release.outputs.tag }} --repo ${{ github.repository }} --pattern 'test-reporter-linux-amd64' --dir dist
